@@ -6,7 +6,6 @@ import { SiteFooter } from "@/components/site-footer"
 import { Toaster } from "@/components/ui/toaster"
 import { cn } from "@/lib/utils"
 import "@/styles/globals.css"
-import 'leaflet/dist/leaflet.css'
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -25,10 +24,6 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <title>JurrasIQ</title>
-        <link 
-          rel="stylesheet" 
-          href="https://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css"
-        />
       </head>
       <body className={cn("min-h-screen bg-background font-sans antialiased", inter.className)}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>

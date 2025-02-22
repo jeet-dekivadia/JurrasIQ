@@ -170,9 +170,14 @@
 }
 
 /* Map Styles */
+.leaflet-container {
+  background: #000 !important;
+}
+
+/* Custom marker styles */
 .user-marker {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: #3b82f6;
   border: 2px solid white;
@@ -180,14 +185,15 @@
 }
 
 .site-marker {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: #ef4444;
   border: 2px solid white;
   box-shadow: 0 0 0 2px #ef4444, 0 0 15px rgba(239, 68, 68, 0.5);
 }
 
+/* Popup styles */
 .fossil-popup .leaflet-popup-content-wrapper {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(8px);
@@ -199,36 +205,7 @@
   background: rgba(255, 255, 255, 0.95);
 }
 
-.site-popup {
-  padding: 16px;
-}
-
-.site-popup h3 {
-  margin: 0 0 12px;
-  color: #ef4444;
-  font-weight: 600;
-  font-size: 1.1em;
-}
-
-.site-popup p {
-  margin: 8px 0;
-  font-size: 0.95em;
-  line-height: 1.5;
-}
-
-/* Add styles for the distance line */
-.distance-line {
-  stroke-dasharray: 8, 12;
-  animation: dash 30s linear infinite;
-}
-
-@keyframes dash {
-  to {
-    stroke-dashoffset: -1000;
-  }
-}
-
-/* Improve map controls */
+/* Map controls */
 .leaflet-control-zoom {
   border: none !important;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15) !important;
@@ -254,11 +231,6 @@
   border-radius: 6px !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
   backdrop-filter: blur(4px);
-}
-
-/* Map container styles */
-.leaflet-container {
-  background: #f5f5f5 !important;
 }
 
 /* Add these styles */
@@ -291,5 +263,32 @@
 
 .osmb-viewport {
   opacity: 0.8;
+}
+
+/* Layer control styles */
+.leaflet-control-layers {
+  border: none !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(8px);
+  padding: 8px !important;
+}
+
+.leaflet-control-layers-list {
+  margin: 6px 0;
+}
+
+.leaflet-control-layers-base label,
+.leaflet-control-layers-overlays label {
+  margin: 4px 0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.leaflet-control-layers-base label:hover,
+.leaflet-control-layers-overlays label:hover {
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
