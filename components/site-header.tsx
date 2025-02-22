@@ -13,11 +13,11 @@ export function SiteHeader() {
         </div>
         <div className="flex flex-1 items-center space-x-2 justify-end">
           <nav className="flex items-center space-x-6 text-sm font-medium">
-            <Link href="/excavation" className="text-foreground/60 transition-colors hover:text-foreground">
-              Excavation
-            </Link>
             <Link href="/analysis" className="text-foreground/60 transition-colors hover:text-foreground">
               Analysis
+            </Link>
+            <Link href="/identification" className="text-foreground/60 transition-colors hover:text-foreground">
+              Identification
             </Link>
             <Link href="/market" className="text-foreground/60 transition-colors hover:text-foreground">
               Market
