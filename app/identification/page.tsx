@@ -1,48 +1,20 @@
 "use client"
 
-import * as React from 'react'
-import { useState } from 'react'
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Loader2, Upload } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 
-interface AnalysisResponse {
-  analysis: string;
-  error?: string;
-  details?: string;
-}
-
 export default function IdentificationPage() {
-  const [selectedImage, setSelectedImage] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [analysis, setAnalysis] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const { toast } = useToast()
+  const [loading, setLoading] = useState(false)
+  const [image, setImage] = useState<File | null>(null)
+  const [description, setDescription] = useState("")
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-
-    // Validate file type and size
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Invalid file type",
-        description: "Please select an image file",
-        variant: "destructive"
-      })
-      return
-    }
-
-    if (file.size > 20 * 1024 * 1024) { // 20MB limit
-      toast({
-        title: "File too large",
-        description: "Please select an image under 20MB",
-        variant: "destructive"
-      })
-      return
-    }
 
     // Preview image
     const reader = new FileReader()
@@ -58,119 +30,79 @@ export default function IdentificationPage() {
   const handleSubmit = async () => {
     if (!selectedImage) {
       toast({
-        title: "No image selected",
-        description: "Please select an image to analyze",
-        variant: "destructive"
+        variant: "destructive",
+        title: "Missing Information",
+        description: "Please provide both an image and description",
       })
       return
     }
 
-    setIsLoading(true)
+    setLoading(true)
     try {
       const formData = new FormData()
-      formData.append('image', selectedImage)
+      formData.append('image', image)
+      formData.append('description', description)
 
       const response = await fetch('/api/ai/identify', {
         method: 'POST',
-        body: formData
+        body: formData,
       })
-
-      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || data.details || 'Failed to analyze image')
+        throw new Error('Failed to analyze image')
       }
 
-      if (!data.analysis) {
-        throw new Error('No analysis received')
-      }
-
+      const data = await response.json()
       setAnalysis(data.analysis)
-      toast({
-        title: "Analysis Complete",
-        description: "Your fossil has been analyzed successfully!",
-      })
-
     } catch (error) {
-      console.error('Error:', error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to analyze the image. Please try again.",
+        description: "Failed to analyze the image. Please try again.",
         variant: "destructive"
       })
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
   return (
-    <div className="container mx-auto py-4 space-y-6">
-      <h1 className="text-4xl font-bold">Fossil Identification</h1>
-      
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Upload Fossil Image</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+    <div className="container mx-auto py-8">
+      <h1 className="text-4xl font-bold mb-8">Fossil Identification</h1>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Upload Fossil Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid w-full max-w-sm items-center gap-1.5">
               <Input
                 type="file"
                 accept="image/*"
-                onChange={handleImageSelect}
-                className="cursor-pointer"
+                onChange={(e) => setImage(e.target.files?.[0] || null)}
               />
             </div>
-            
-            {imagePreview && (
-              <div className="relative aspect-square w-full overflow-hidden rounded-lg">
-                <img
-                  src={imagePreview}
-                  alt="Selected fossil"
-                  className="object-cover"
-                />
-              </div>
-            )}
 
-            <Button 
-              onClick={handleSubmit} 
-              disabled={!selectedImage || isLoading}
-              className="w-full"
-            >
-              {isLoading ? (
+            <Textarea
+              placeholder="Describe the fossil and its finding context..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="min-h-[100px]"
+            />
+
+            <Button disabled={loading}>
+              {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Upload className="mr-2 h-4 w-4 animate-spin" />
                   Analyzing...
                 </>
               ) : (
-                <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Analyze Fossil
-                </>
+                "Analyze Fossil"
               )}
             </Button>
-          </CardContent>
-        </Card>
-
-        {(isLoading || analysis) && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Analysis Results</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex items-center justify-center p-8">
-                  <Loader2 className="h-8 w-8 animate-spin" />
-                </div>
-              ) : analysis && (
-                <div className="prose dark:prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap">{analysis}</div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-      </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 } 
