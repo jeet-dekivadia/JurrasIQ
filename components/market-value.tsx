@@ -35,6 +35,43 @@ export function MarketValue() {
   })
   const { toast } = useToast()
 
+  useEffect(() => {
+    // Check Python setup before loading options
+    const checkSetup = async () => {
+      try {
+        const response = await fetch('/api/market/setup')
+        const status = await response.json()
+        
+        if (!status.hasRequiredPackages) {
+          toast({
+            title: "Setup Error",
+            description: status.error || "Python environment not properly configured",
+            variant: "destructive"
+          })
+          return false
+        }
+        return true
+      } catch (error) {
+        console.error('Setup check failed:', error)
+        toast({
+          title: "Setup Error",
+          description: "Failed to verify Python environment",
+          variant: "destructive"
+        })
+        return false
+      }
+    }
+
+    const init = async () => {
+      const setupOk = await checkSetup()
+      if (setupOk) {
+        loadOptions()
+      }
+    }
+
+    init()
+  }, [toast])
+
   // Load available options when component mounts
   useEffect(() => {
     const loadOptions = async () => {

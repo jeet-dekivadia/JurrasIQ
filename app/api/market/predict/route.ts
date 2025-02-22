@@ -27,46 +27,77 @@ export async function POST(req: Request) {
 
 async function runPythonPredictor(fossilFamily: string, bodyPart: string) {
   return new Promise((resolve, reject) => {
-    const pythonProcess = spawn('python', [
-      join(process.cwd(), 'lib/market_predictor.py'),
-      fossilFamily,
-      bodyPart
-    ])
-
-    let outputData = ''
-
-    pythonProcess.stdout.on('data', (data) => {
-      outputData += data.toString()
-    })
-
-    pythonProcess.stderr.on('data', (data) => {
-      console.error('Python error:', data.toString())
-    })
-
-    pythonProcess.on('close', (code) => {
-      try {
-        const output = outputData.trim()
-        if (!output) {
-          reject(new Error('No output from prediction script'))
-          return
-        }
-
-        const result = JSON.parse(output)
-        if (result.error) {
-          reject(new Error(result.error))
-          return
-        }
-
-        resolve(result)
-      } catch (error) {
-        console.error('Failed to parse prediction output:', error)
-        console.error('Raw output:', outputData)
-        reject(new Error('Failed to parse prediction results'))
+    // Try different Python commands
+    const pythonCommands = ['python3', 'python', 'py']
+    let currentCommand = 0
+    
+    function tryRunPython() {
+      if (currentCommand >= pythonCommands.length) {
+        reject(new Error('Python interpreter not found. Please ensure Python is installed and in your PATH.'))
+        return
       }
-    })
 
-    pythonProcess.on('error', (error) => {
-      reject(new Error(`Failed to run prediction script: ${error.message}`))
-    })
+      const pythonProcess = spawn(pythonCommands[currentCommand], [
+        join(process.cwd(), 'lib/market_predictor.py'),
+        fossilFamily,
+        bodyPart
+      ])
+
+      let outputData = ''
+      let errorData = ''
+
+      pythonProcess.stdout.on('data', (data) => {
+        outputData += data.toString()
+      })
+
+      pythonProcess.stderr.on('data', (data) => {
+        errorData += data.toString()
+        console.error('Python error:', data.toString())
+      })
+
+      pythonProcess.on('close', (code) => {
+        if (code === null) {
+          currentCommand++
+          tryRunPython()
+          return
+        }
+
+        try {
+          const output = outputData.trim()
+          if (!output) {
+            if (errorData) {
+              reject(new Error(`Python error: ${errorData}`))
+            } else {
+              reject(new Error('No output from prediction script'))
+            }
+            return
+          }
+
+          const result = JSON.parse(output)
+          if (result.error) {
+            reject(new Error(result.error))
+            return
+          }
+
+          resolve(result)
+        } catch (error) {
+          console.error('Failed to parse prediction output:', error)
+          console.error('Raw output:', outputData)
+          reject(new Error('Failed to parse prediction results'))
+        }
+      })
+
+      pythonProcess.on('error', (error) => {
+        if (error.code === 'ENOENT') {
+          currentCommand++
+          tryRunPython()
+        } else {
+          reject(new Error(`Failed to run prediction script: ${error.message}`))
+        }
+      })
+    }
+
+    // Start trying Python commands
+    tryRunPython()
   })
 } 
