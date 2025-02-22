@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
-import type { Map as LeafletMap } from 'leaflet'
+import type { Map as LeafletMap, Marker } from 'leaflet'
 import type { FossilLocation } from '@/lib/load-fossil-data'
 import { useToast } from "@/components/ui/use-toast"
 import { Loader2 } from "lucide-react"
@@ -13,10 +13,12 @@ interface DynamicMapProps {
 export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
   const mapRef = useRef<LeafletMap | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const markerRef = useRef<any>(null)
+  const markerRef = useRef<Marker | null>(null)
   const heatmapLayerRef = useRef<any>(null)
+  const markersLayerRef = useRef<any>(null)
   const [isCustomLocation, setIsCustomLocation] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [topSites, setTopSites] = useState<FossilLocation[]>([])
   const { toast } = useToast()
 
   useEffect(() => {
@@ -30,6 +32,7 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
 
         // Import Leaflet dynamically
         const L = (await import('leaflet')).default
+        await import('leaflet.heat')
 
         // Create map instance
         const map = L.map(containerRef.current, {
@@ -52,94 +55,117 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
 
         // Load fossil data
         const response = await fetch('/api/fossils')
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(error.details || error.error || 'Failed to fetch fossil data')
-        }
-
         const fossilData: FossilLocation[] = await response.json()
-        if (!fossilData?.length) {
-          throw new Error('No fossil data available')
-        }
-
-        console.log(`Rendering ${fossilData.length} fossil locations`)
 
         // Create heatmap layer
-        const { HeatLayer } = await import('leaflet.heat')
-        const heatmapData = fossilData.map(location => ([
-          location.latitude,
-          location.longitude,
-          location.significance * 2
-        ]))
-
-        // @ts-ignore - HeatLayer types are not properly defined
-        heatmapLayerRef.current = L.heatLayer(heatmapData, {
-          radius: 30,
-          blur: 20,
+        const heatData = fossilData.map(loc => [
+          loc.latitude,
+          loc.longitude,
+          loc.significance // Weight by significance
+        ])
+        
+        heatmapLayerRef.current = L.heatLayer(heatData, {
+          radius: 25,
+          blur: 15,
           maxZoom: 10,
-          max: 20,
+          max: 10,
           gradient: {
-            0.2: 'blue',
-            0.4: 'cyan',
+            0.4: 'blue',
             0.6: 'lime',
             0.8: 'yellow',
             1.0: 'red'
           }
-        }).addTo(map)
-
-        // Handle location selection
-        map.on('click', (e: L.LeafletMouseEvent) => {
-          if (isCustomLocation) {
-            const { lat, lng } = e.latlng
-            
-            if (markerRef.current) {
-              markerRef.current.setLatLng([lat, lng])
-            } else {
-              markerRef.current = L.marker([lat, lng]).addTo(map)
-            }
-
-            onLocationSelect?.({ lat, lng })
-          } else {
-            // Show fossil info popup
-            const nearbyFossils = fossilData.filter(location => {
-              const distance = map.distance(
-                [location.latitude, location.longitude],
-                [e.latlng.lat, e.latlng.lng]
-              )
-              return distance < 100000 // Within 100km
-            })
-
-            if (nearbyFossils.length > 0) {
-              L.popup()
-                .setLatLng(e.latlng)
-                .setContent(`
-                  <div class="p-2">
-                    <h3 class="font-bold">Fossil Site Information</h3>
-                    <p>Number of sites: ${nearbyFossils.length}</p>
-                    <p>Types found: ${Array.from(new Set(nearbyFossils.map(f => f.fossilType))).slice(0, 3).join(', ')}...</p>
-                  </div>
-                `)
-                .openOn(map)
-            }
-          }
         })
 
+        // Get top 10 sites by significance
+        const topSites = [...fossilData]
+          .sort((a, b) => b.significance - a.significance)
+          .slice(0, 10)
+        
+        setTopSites(topSites)
+
+        // Create markers layer
+        markersLayerRef.current = L.layerGroup()
+        topSites.forEach((site, index) => {
+          const marker = L.marker([site.latitude, site.longitude], {
+            icon: L.divIcon({
+              className: 'custom-div-icon',
+              html: `<div class='marker-pin'>${index + 1}</div>`,
+              iconSize: [30, 42],
+              iconAnchor: [15, 42]
+            })
+          })
+
+          marker.on('click', async () => {
+            try {
+              const response = await fetch('/api/ai/analyze', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  type: 'analyze_location',
+                  data: {
+                    lat: site.latitude,
+                    lng: site.longitude,
+                    fossilType: site.fossilType,
+                    environment: site.environment,
+                    age_start: site.age_start,
+                    age_end: site.age_end
+                  }
+                }),
+              })
+
+              const data = await response.json()
+              
+              marker.bindPopup(
+                `<div class="site-popup">
+                  <h3>Top Excavation Site #${index + 1}</h3>
+                  <p><strong>Fossil Types:</strong> ${site.fossilType}</p>
+                  <p><strong>Environment:</strong> ${site.environment}</p>
+                  <p><strong>Age:</strong> ${site.age_start} - ${site.age_end} million years ago</p>
+                  <p><strong>Analysis:</strong> ${data.analysis}</p>
+                </div>`,
+                { maxWidth: 300 }
+              ).openPopup()
+            } catch (error) {
+              console.error('Failed to get site analysis:', error)
+            }
+          })
+
+          marker.addTo(markersLayerRef.current)
+        })
+
+        // Add layers to map
+        heatmapLayerRef.current.addTo(map)
+        markersLayerRef.current.addTo(map)
+
+        // Handle clicks for custom location
+        map.on('click', (e: any) => {
+          if (!isCustomLocation) return
+
+          const { lat, lng } = e.latlng
+
+          if (markerRef.current) {
+            map.removeLayer(markerRef.current)
+          }
+
+          markerRef.current = L.marker([lat, lng]).addTo(map)
+          onLocationSelect?.({ lat, lng })
+        })
+
+        setIsLoading(false)
       } catch (error) {
-        console.error('Failed to initialize map:', error)
+        console.error('Map initialization failed:', error)
         toast({
           title: "Error",
-          description: String(error) || "Failed to load map data. Please try refreshing the page.",
+          description: "Failed to load the map. Please try again.",
           variant: "destructive"
         })
-      } finally {
-        if (isMounted) {
-          setIsLoading(false)
-        }
       }
     }
 
-    // Small delay to ensure container is ready
-    setTimeout(initMap, 100)
+    initMap()
 
     return () => {
       isMounted = false
@@ -158,9 +184,15 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
       if (heatmapLayerRef.current) {
         mapRef.current.removeLayer(heatmapLayerRef.current)
       }
+      if (markersLayerRef.current) {
+        mapRef.current.removeLayer(markersLayerRef.current)
+      }
     } else {
       if (heatmapLayerRef.current) {
         mapRef.current.addLayer(heatmapLayerRef.current)
+      }
+      if (markersLayerRef.current) {
+        mapRef.current.addLayer(markersLayerRef.current)
       }
       if (markerRef.current) {
         mapRef.current.removeLayer(markerRef.current)
@@ -182,7 +214,6 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
       <div 
         ref={containerRef} 
         className="absolute inset-0 z-0 rounded-lg"
-        style={{ backgroundColor: '#f0f0f0' }}
       />
       <div className="absolute top-4 right-4 z-[1000]">
         <button

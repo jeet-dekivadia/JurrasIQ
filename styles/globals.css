@@ -108,3 +108,54 @@
   filter: blur(1px);
 }
 
+/* Add these styles */
+.custom-div-icon {
+  background: transparent;
+  border: none;
+}
+
+.marker-pin {
+  width: 30px;
+  height: 30px;
+  border-radius: 50% 50% 50% 0;
+  background: #c2410c;
+  position: absolute;
+  transform: rotate(-45deg);
+  left: 50%;
+  top: 50%;
+  margin: -15px 0 0 -15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.marker-pin::after {
+  content: attr(data-index);
+  width: 24px;
+  height: 24px;
+  margin: 3px 0 0 3px;
+  background: #fff;
+  position: absolute;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(45deg);
+  color: #c2410c;
+  font-weight: bold;
+}
+
+.site-popup {
+  padding: 10px;
+}
+
+.site-popup h3 {
+  margin: 0 0 10px;
+  color: #c2410c;
+  font-weight: bold;
+}
+
+.site-popup p {
+  margin: 5px 0;
+}
+
