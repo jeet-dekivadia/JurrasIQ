@@ -1,39 +1,48 @@
 import { spawn } from 'child_process'
+import { join } from 'path'
 
 export async function checkPythonEnvironment(): Promise<{
   pythonCommand: string
   hasRequiredPackages: boolean
   error?: string
 }> {
-  const pythonCommands = ['python3', 'python', 'py']
+  const pythonCommands = process.platform === 'win32' 
+    ? ['python', 'py', 'python3']
+    : ['python3', 'python']
   
   for (const cmd of pythonCommands) {
     try {
+      // First check if Python is available
+      const versionCheck = await new Promise<boolean>((resolve) => {
+        const process = spawn(cmd, ['--version'])
+        process.on('error', () => resolve(false))
+        process.on('close', (code) => resolve(code === 0))
+      })
+
+      if (!versionCheck) continue
+
+      // Then check required packages
+      const checkScript = join(process.cwd(), 'lib', 'check_packages.py')
       const result = await new Promise<string>((resolve, reject) => {
-        const process = spawn(cmd, ['-c', 'import pandas, numpy, sklearn; print("OK")'])
+        const process = spawn(cmd, [checkScript])
         
         let output = ''
         let error = ''
         
-        process.stdout.on('data', (data) => {
+        process.stdout.on('data', (data: Buffer) => {
           output += data.toString()
         })
         
-        process.stderr.on('data', (data) => {
+        process.stderr.on('data', (data: Buffer) => {
           error += data.toString()
         })
         
-        process.on('close', (code) => {
+        process.on('close', (code: number | null) => {
           if (code === 0) {
             resolve(output.trim())
           } else {
             reject(error || 'Process failed')
           }
-        })
-        
-        process.on('error', () => {
-          // Continue to next command if this one isn't found
-          resolve('')
         })
       })
       

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { spawn } from 'child_process'
 import { join } from 'path'
+import { checkPythonEnvironment } from '@/lib/check-python'
 
 export async function POST(req: Request) {
   try {
@@ -14,7 +15,16 @@ export async function POST(req: Request) {
       )
     }
 
-    const prediction = await runPythonPredictor(fossilFamily, bodyPart)
+    // Get the correct Python command
+    const { pythonCommand, hasRequiredPackages, error } = await checkPythonEnvironment()
+    if (!hasRequiredPackages || !pythonCommand) {
+      return NextResponse.json(
+        { error: error || 'Python environment not configured' },
+        { status: 500 }
+      )
+    }
+
+    const prediction = await runPythonPredictor(pythonCommand, fossilFamily, bodyPart)
     return NextResponse.json(prediction)
   } catch (error) {
     console.error('Market prediction failed:', error)
@@ -25,79 +35,54 @@ export async function POST(req: Request) {
   }
 }
 
-async function runPythonPredictor(fossilFamily: string, bodyPart: string) {
+async function runPythonPredictor(pythonCommand: string, fossilFamily: string, bodyPart: string) {
   return new Promise((resolve, reject) => {
-    // Try different Python commands
-    const pythonCommands = ['python3', 'python', 'py']
-    let currentCommand = 0
-    
-    function tryRunPython() {
-      if (currentCommand >= pythonCommands.length) {
-        reject(new Error('Python interpreter not found. Please ensure Python is installed and in your PATH.'))
-        return
-      }
+    const pythonProcess = spawn(pythonCommand, [
+      join(process.cwd(), 'lib/market_predictor.py'),
+      fossilFamily,
+      bodyPart
+    ])
 
-      const pythonProcess = spawn(pythonCommands[currentCommand], [
-        join(process.cwd(), 'lib/market_predictor.py'),
-        fossilFamily,
-        bodyPart
-      ])
+    let outputData = ''
+    let errorData = ''
 
-      let outputData = ''
-      let errorData = ''
+    pythonProcess.stdout.on('data', (data: Buffer) => {
+      outputData += data.toString()
+    })
 
-      pythonProcess.stdout.on('data', (data) => {
-        outputData += data.toString()
-      })
+    pythonProcess.stderr.on('data', (data: Buffer) => {
+      errorData += data.toString()
+      console.error('Python error:', data.toString())
+    })
 
-      pythonProcess.stderr.on('data', (data) => {
-        errorData += data.toString()
-        console.error('Python error:', data.toString())
-      })
-
-      pythonProcess.on('close', (code) => {
-        if (code === null) {
-          currentCommand++
-          tryRunPython()
+    pythonProcess.on('close', (code: number | null) => {
+      try {
+        const output = outputData.trim()
+        if (!output) {
+          if (errorData) {
+            reject(new Error(`Python error: ${errorData}`))
+          } else {
+            reject(new Error('No output from prediction script'))
+          }
           return
         }
 
-        try {
-          const output = outputData.trim()
-          if (!output) {
-            if (errorData) {
-              reject(new Error(`Python error: ${errorData}`))
-            } else {
-              reject(new Error('No output from prediction script'))
-            }
-            return
-          }
-
-          const result = JSON.parse(output)
-          if (result.error) {
-            reject(new Error(result.error))
-            return
-          }
-
-          resolve(result)
-        } catch (error) {
-          console.error('Failed to parse prediction output:', error)
-          console.error('Raw output:', outputData)
-          reject(new Error('Failed to parse prediction results'))
+        const result = JSON.parse(output)
+        if (result.error) {
+          reject(new Error(result.error))
+          return
         }
-      })
 
-      pythonProcess.on('error', (error) => {
-        if (error.code === 'ENOENT') {
-          currentCommand++
-          tryRunPython()
-        } else {
-          reject(new Error(`Failed to run prediction script: ${error.message}`))
-        }
-      })
-    }
+        resolve(result)
+      } catch (error) {
+        console.error('Failed to parse prediction output:', error)
+        console.error('Raw output:', outputData)
+        reject(new Error('Failed to parse prediction results'))
+      }
+    })
 
-    // Start trying Python commands
-    tryRunPython()
+    pythonProcess.on('error', (error: Error) => {
+      reject(new Error(`Failed to run prediction script: ${error.message}`))
+    })
   })
 } 
