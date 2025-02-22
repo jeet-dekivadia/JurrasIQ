@@ -20,116 +20,68 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
   const { toast } = useToast()
 
   useEffect(() => {
-    const initMap = async () => {
-      if (typeof window === 'undefined' || !containerRef.current || mapRef.current) return
+    if (typeof window === 'undefined' || !containerRef.current || mapRef.current) return
 
+    const initMap = async () => {
       setIsLoading(true)
       try {
-        // Dynamically import Leaflet
+        // Import Leaflet dynamically
         const L = (await import('leaflet')).default
-        await import('leaflet/dist/leaflet.css')
-        await import('leaflet.heat')
-
-        // Fix Leaflet's default marker icon issue
-        const icon = L.icon({
-          iconUrl: '/marker-icon.png',
-          iconRetinaUrl: '/marker-icon-2x.png',
-          shadowUrl: '/marker-shadow.png',
-          iconSize: [25, 41],
-          iconAnchor: [12, 41]
-        })
 
         // Initialize map
-        mapRef.current = L.map(containerRef.current, {
-          center: [20, 0],
-          zoom: 2,
-          layers: [
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-              maxZoom: 19,
-              attribution: '© OpenStreetMap contributors'
-            })
-          ]
-        })
+        mapRef.current = L.map(containerRef.current).setView([20, 0], 2)
+
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(mapRef.current)
 
         // Load fossil data
         const response = await fetch('/api/fossils')
         if (!response.ok) {
           throw new Error('Failed to fetch fossil data')
         }
-        
+
         const fossilData: FossilLocation[] = await response.json()
-        if (!fossilData || fossilData.length === 0) {
+        if (!fossilData?.length) {
           throw new Error('No fossil data available')
         }
 
-        // Create heatmap
+        // Create heatmap layer
+        const { HeatLayer } = await import('leaflet.heat')
         const heatmapData = fossilData.map(location => ([
           location.latitude,
           location.longitude,
           location.significance * 2
         ]))
 
-        // @ts-ignore
+        // @ts-ignore - HeatLayer types are not properly defined
         heatmapLayerRef.current = L.heatLayer(heatmapData, {
-          radius: 25,
-          blur: 15,
+          radius: 30,
+          blur: 20,
           maxZoom: 10,
-          max: 10,
+          max: 20,
           gradient: {
-            0.4: 'blue',
-            0.6: 'cyan',
-            0.7: 'lime',
+            0.2: 'blue',
+            0.4: 'cyan',
+            0.6: 'lime',
             0.8: 'yellow',
             1.0: 'red'
           }
         }).addTo(mapRef.current)
 
-        // Handle location button click
-        if (isCustomLocation) {
-          // Remove heatmap when in location selection mode
-          if (heatmapLayerRef.current) {
-            mapRef.current.removeLayer(heatmapLayerRef.current)
-          }
-          
-          // Try to get user's location
-          mapRef.current.locate({
-            setView: true,
-            maxZoom: 8,
-            enableHighAccuracy: true
-          })
-
-          mapRef.current.on('locationfound', (e: any) => {
-            if (markerRef.current) {
-              markerRef.current.setLatLng(e.latlng)
-            } else {
-              markerRef.current = L.marker(e.latlng, { icon }).addTo(mapRef.current!)
-            }
-            onLocationSelect?.(e.latlng)
-          })
-
-          mapRef.current.on('locationerror', (e: any) => {
-            toast({
-              title: "Location Error",
-              description: "Could not get your location. Please click on the map to select a location.",
-              variant: "destructive"
-            })
-          })
-        } else {
-          // Show heatmap in view mode
-          if (heatmapLayerRef.current) {
-            mapRef.current.addLayer(heatmapLayerRef.current)
-          }
-        }
-
-        // Handle map clicks
+        // Handle location selection
         mapRef.current.on('click', (e: L.LeafletMouseEvent) => {
           if (isCustomLocation) {
             const { lat, lng } = e.latlng
+            
             if (markerRef.current) {
               markerRef.current.setLatLng([lat, lng])
             } else {
-              markerRef.current = L.marker([lat, lng], { icon }).addTo(mapRef.current!)
+              markerRef.current = L.marker([lat, lng]).addTo(mapRef.current!)
             }
+
             onLocationSelect?.({ lat, lng })
           } else {
             // Show fossil info popup
@@ -138,7 +90,7 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
                 [location.latitude, location.longitude],
                 [e.latlng.lat, e.latlng.lng]
               )
-              return distance < 100000
+              return distance < 100000 // Within 100km
             })
 
             if (nearbyFossils.length > 0) {
@@ -160,7 +112,7 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
         console.error('Failed to initialize map:', error)
         toast({
           title: "Error",
-          description: "Failed to load fossil data. Please try refreshing the page.",
+          description: "Failed to load map data. Please try refreshing the page.",
           variant: "destructive"
         })
       } finally {
@@ -176,7 +128,26 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
         mapRef.current = null
       }
     }
-  }, [onLocationSelect, isCustomLocation, toast])
+  }, [isCustomLocation, onLocationSelect, toast])
+
+  // Toggle between heatmap and location selection
+  useEffect(() => {
+    if (!mapRef.current) return
+
+    if (isCustomLocation) {
+      if (heatmapLayerRef.current) {
+        mapRef.current.removeLayer(heatmapLayerRef.current)
+      }
+    } else {
+      if (heatmapLayerRef.current) {
+        mapRef.current.addLayer(heatmapLayerRef.current)
+      }
+      if (markerRef.current) {
+        mapRef.current.removeLayer(markerRef.current)
+        markerRef.current = null
+      }
+    }
+  }, [isCustomLocation])
 
   if (isLoading) {
     return (
