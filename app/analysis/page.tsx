@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { MapView } from "@/components/map-view"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import MapView from "../../src/components/map-view"
+import { Card, CardContent, CardHeader, CardTitle } from "../../src/components/ui/card"
 import { Loader2 } from "lucide-react"
 
 interface AnalysisResult {

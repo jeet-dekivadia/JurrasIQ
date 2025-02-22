@@ -2,11 +2,11 @@
 
 import * as React from 'react'
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "../../src/components/ui/card"
+import { Input } from "../../src/components/ui/input"
+import { Button } from "../../src/components/ui/button"
 import { Loader2, Upload } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "../../src/components/ui/use-toast"
 
 interface AnalysisResponse {
   analysis: string;
