@@ -9,9 +9,9 @@ function prepareModel() {
       fs.mkdirSync(modelDir, { recursive: true })
     }
 
-    // Copy model files if they exist
+    // Copy the converted model files from identification folder
     const sourceDir = path.join(process.cwd(), 'identification')
-    const modelFiles = ['model.json', 'weights.bin'].map(file => 
+    const modelFiles = ['model.json', 'group1-shard1of1.bin'].map(file => 
       path.join(sourceDir, file)
     )
 
@@ -19,6 +19,9 @@ function prepareModel() {
       if (fs.existsSync(file)) {
         const fileName = path.basename(file)
         fs.copyFileSync(file, path.join(modelDir, fileName))
+        console.log(`Copied ${fileName}`)
+      } else {
+        console.warn(`Warning: ${file} not found`)
       }
     })
 

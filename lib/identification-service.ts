@@ -7,35 +7,38 @@ interface PredictionResult {
   probability: number
 }
 
+// These classes should match the folders in identification/dataset
 const CLASSES = [
   'Ammonites',
-  'Belemnites',
+  'Belemnites', 
   'Crinoids',
   'Leaf fossils',
   'Trilobites',
   'Corals'
 ] as const
 
-const IMAGE_SIZE = 224
+const IMAGE_SIZE = 224 // This should match the model's expected input size
 
 export class IdentificationService {
   private model: tf.LayersModel | null = null
   private modelLoading: Promise<tf.LayersModel> | null = null
-  private modelPath = '/model/model.json'
   private initialized = false
 
   async initialize() {
     if (this.initialized) return
 
     try {
-      // Try WebGL first
+      // Try WebGL first for better performance
       await tf.setBackend('webgl')
+      await tf.ready()
+      console.log('Using WebGL backend')
     } catch (error) {
       console.warn('WebGL initialization failed, falling back to CPU:', error)
       await tf.setBackend('cpu')
+      await tf.ready()
+      console.log('Using CPU backend')
     }
 
-    await tf.ready()
     this.initialized = true
   }
 
@@ -47,21 +50,10 @@ export class IdentificationService {
         try {
           await this.initialize()
           
-          // Check if model exists
-          try {
-            const response = await fetch(this.modelPath)
-            if (!response.ok) {
-              throw new Error('Model not found')
-            }
-          } catch (error) {
-            console.error('Model file check failed:', error)
-            throw new Error('Failed to find model file')
-          }
-
-          // Load model
-          const model = await tf.loadLayersModel(this.modelPath)
+          // Load the converted model from public/model
+          const model = await tf.loadLayersModel('/model/model.json')
           
-          // Warm up the model
+          // Warm up the model with a dummy input
           const dummyInput = tf.zeros([1, IMAGE_SIZE, IMAGE_SIZE, 3])
           await model.predict(dummyInput).dispose()
           dummyInput.dispose()
@@ -84,7 +76,7 @@ export class IdentificationService {
       const img = await this.loadImage(imageUrl)
       
       return tf.tidy(() => {
-        // Convert to tensor and normalize
+        // Convert to tensor
         const tensor = tf.browser.fromPixels(img)
         
         // Resize maintaining aspect ratio
@@ -95,7 +87,7 @@ export class IdentificationService {
         
         const resized = tf.image.resizeBilinear(tensor, [newHeight, newWidth])
         
-        // Pad to square if needed
+        // Pad to square
         const padTop = Math.floor((IMAGE_SIZE - newHeight) / 2)
         const padBottom = IMAGE_SIZE - newHeight - padTop
         const padLeft = Math.floor((IMAGE_SIZE - newWidth) / 2)
@@ -140,10 +132,12 @@ export class IdentificationService {
       // Get predictions
       predictions = tf.tidy(() => {
         const pred = model.predict(preprocessed!) as tf.Tensor
-        return pred.softmax()
+        return pred.softmax() // Convert to probabilities
       })
 
       const probabilities = await predictions.data() as Float32Array
+
+      // Get top 3 predictions
       const topK = 3
       const indices = Array.from(probabilities)
         .map((probability, index) => ({ probability, index }))
@@ -152,7 +146,7 @@ export class IdentificationService {
 
       return indices.map(({ probability, index }) => ({
         class: CLASSES[index],
-        probability: probability * 100
+        probability: probability * 100 // Convert to percentage
       }))
     } catch (error) {
       console.error('Prediction failed:', error)
