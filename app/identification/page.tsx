@@ -7,16 +7,16 @@ import { Button } from "@/components/ui/button"
 import { Loader2, Upload } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 
-interface IdentificationResult {
-  species: string
-  confidence: number
-  description: string
+interface AnalysisResponse {
+  analysis: string;
+  error?: string;
+  details?: string;
 }
 
 export default function IdentificationPage() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [result, setResult] = useState<IdentificationResult | null>(null)
+  const [analysis, setAnalysis] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
@@ -51,7 +51,7 @@ export default function IdentificationPage() {
     reader.readAsDataURL(file)
 
     setSelectedImage(file)
-    setResult(null)
+    setAnalysis(null)
   }
 
   const handleSubmit = async () => {
@@ -69,7 +69,7 @@ export default function IdentificationPage() {
       const formData = new FormData()
       formData.append('image', selectedImage)
 
-      const response = await fetch('/api/identification', {
+      const response = await fetch('/api/ai/identify', {
         method: 'POST',
         body: formData
       })
@@ -80,15 +80,11 @@ export default function IdentificationPage() {
         throw new Error(data.error || data.details || 'Failed to analyze image')
       }
 
-      if (!data.species) {
+      if (!data.analysis) {
         throw new Error('No analysis received')
       }
 
-      setResult({
-        species: data.species,
-        confidence: data.confidence,
-        description: data.description
-      })
+      setAnalysis(data.analysis)
       toast({
         title: "Analysis Complete",
         description: "Your fossil has been analyzed successfully!",
@@ -155,7 +151,7 @@ export default function IdentificationPage() {
           </CardContent>
         </Card>
 
-        {(isLoading || result) && (
+        {(isLoading || analysis) && (
           <Card>
             <CardHeader>
               <CardTitle>Analysis Results</CardTitle>
@@ -165,9 +161,9 @@ export default function IdentificationPage() {
                 <div className="flex items-center justify-center p-8">
                   <Loader2 className="h-8 w-8 animate-spin" />
                 </div>
-              ) : result && (
+              ) : analysis && (
                 <div className="prose dark:prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap">{result.description}</div>
+                  <div className="whitespace-pre-wrap">{analysis}</div>
                 </div>
               )}
             </CardContent>

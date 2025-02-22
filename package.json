@@ -70,11 +70,9 @@
     "openai": "^4.28.0",
     "@tailwindcss/typography": "^0.5.10",
     "@types/node": "^20.0.0",
-    "sharp": "^0.33.2",
+    "sharp": "^0.33.0",
     "typescript": "^5.0.0",
-    "@types/next": "^9.0.0",
-    "@tensorflow/tfjs": "^4.17.0",
-    "@tensorflow/tfjs-node": "^4.17.0"
+    "@types/next": "^9.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -85,7 +83,6 @@
     "@types/csv-parse": "^1.2.2",
     "postcss": "^8",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.0.0",
-    "@types/sharp": "^0.31.1"
+    "typescript": "^5.0.0"
   }
 }
