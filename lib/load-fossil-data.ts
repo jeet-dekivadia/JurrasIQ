@@ -15,13 +15,14 @@ export interface FossilLocation {
 
 export function loadFossilData(): FossilLocation[] {
   try {
-    const filePath = path.join(process.cwd(), 'data', 'fossil_data_cleaned.csv')
+    // Use the correct path relative to the project root
+    const filePath = path.join(__dirname, '..', '..', 'data', 'fossil_data_cleaned.csv')
     const fileContent = fs.readFileSync(filePath, 'utf-8')
     
     const records = parse(fileContent, {
-      columns: ['Latitude', 'Longitude', 'Fossil_Name', 'Early_Age', 'Late_Age', 'Environment', 'Country_Code'],
+      columns: true, // Use first row as headers
       skip_empty_lines: true,
-      from_line: 2 // Skip header row
+      delimiter: ',' // Explicitly set delimiter
     })
 
     // Group fossils by location to calculate site significance
@@ -36,10 +37,10 @@ export function loadFossilData(): FossilLocation[] {
     })
 
     // Convert grouped data to FossilLocation array
-    return Array.from(locationMap.entries()).map(([coords, fossils]) => {
+    const locations = Array.from(locationMap.entries()).map(([coords, fossils]) => {
       const [lat, lng] = coords.split(',').map(Number)
       
-      // Calculate significance based on number of fossils and age range
+      // Calculate significance based on number of fossils
       const significance = Math.min(10, Math.sqrt(fossils.length) * 2)
 
       return {
@@ -53,8 +54,12 @@ export function loadFossilData(): FossilLocation[] {
         country: fossils[0].Country_Code
       }
     })
+
+    console.log(`Loaded ${locations.length} fossil locations from ${filePath}`)
+    return locations
+
   } catch (error) {
     console.error('Error loading fossil data:', error)
-    return []
+    throw error
   }
 } 

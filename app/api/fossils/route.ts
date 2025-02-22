@@ -7,15 +7,22 @@ export async function GET() {
     
     if (!fossilData || fossilData.length === 0) {
       console.error('No fossil data loaded')
-      return NextResponse.json({ error: 'No fossil data available' }, { status: 500 })
+      return NextResponse.json(
+        { error: 'No fossil data available' }, 
+        { status: 500 }
+      )
     }
 
-    console.log(`Loaded ${fossilData.length} fossil locations`)
+    console.log(`Serving ${fossilData.length} fossil locations`)
     return NextResponse.json(fossilData)
+    
   } catch (error) {
     console.error('Failed to load fossil data:', error)
     return NextResponse.json(
-      { error: 'Failed to load fossil data' }, 
+      { 
+        error: 'Failed to load fossil data',
+        details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+      }, 
       { status: 500 }
     )
   }

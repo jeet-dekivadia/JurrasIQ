@@ -40,13 +40,16 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
         // Load fossil data
         const response = await fetch('/api/fossils')
         if (!response.ok) {
-          throw new Error('Failed to fetch fossil data')
+          const error = await response.json()
+          throw new Error(error.details || error.error || 'Failed to fetch fossil data')
         }
 
         const fossilData: FossilLocation[] = await response.json()
         if (!fossilData?.length) {
           throw new Error('No fossil data available')
         }
+
+        console.log(`Rendering ${fossilData.length} fossil locations`)
 
         // Create heatmap layer
         const { HeatLayer } = await import('leaflet.heat')
@@ -112,7 +115,7 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
         console.error('Failed to initialize map:', error)
         toast({
           title: "Error",
-          description: "Failed to load map data. Please try refreshing the page.",
+          description: String(error) || "Failed to load map data. Please try refreshing the page.",
           variant: "destructive"
         })
       } finally {
