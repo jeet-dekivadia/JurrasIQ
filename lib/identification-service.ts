@@ -1,5 +1,6 @@
 import * as tf from '@tensorflow/tfjs'
 import '@tensorflow/tfjs-backend-webgl'
+import '@tensorflow/tfjs-backend-cpu'
 
 interface PredictionResult {
   class: string
@@ -21,6 +22,22 @@ export class IdentificationService {
   private model: tf.LayersModel | null = null
   private modelLoading: Promise<tf.LayersModel> | null = null
   private modelPath = '/model/model.json'
+  private initialized = false
+
+  async initialize() {
+    if (this.initialized) return
+
+    try {
+      // Try WebGL first
+      await tf.setBackend('webgl')
+    } catch (error) {
+      console.warn('WebGL initialization failed, falling back to CPU:', error)
+      await tf.setBackend('cpu')
+    }
+
+    await tf.ready()
+    this.initialized = true
+  }
 
   async loadModel() {
     if (this.model) return this.model
@@ -28,9 +45,7 @@ export class IdentificationService {
     if (!this.modelLoading) {
       this.modelLoading = (async () => {
         try {
-          // Initialize WebGL backend
-          await tf.setBackend('webgl')
-          await tf.ready()
+          await this.initialize()
           
           // Check if model exists
           try {
@@ -39,11 +54,18 @@ export class IdentificationService {
               throw new Error('Model not found')
             }
           } catch (error) {
+            console.error('Model file check failed:', error)
             throw new Error('Failed to find model file')
           }
 
           // Load model
           const model = await tf.loadLayersModel(this.modelPath)
+          
+          // Warm up the model
+          const dummyInput = tf.zeros([1, IMAGE_SIZE, IMAGE_SIZE, 3])
+          await model.predict(dummyInput).dispose()
+          dummyInput.dispose()
+
           this.model = model
           return model
         } catch (error) {
@@ -64,9 +86,29 @@ export class IdentificationService {
       return tf.tidy(() => {
         // Convert to tensor and normalize
         const tensor = tf.browser.fromPixels(img)
-        const resized = tf.image.resizeBilinear(tensor, [IMAGE_SIZE, IMAGE_SIZE])
-        const normalized = resized.div(255.0)
-        return normalized.expandDims(0)
+        
+        // Resize maintaining aspect ratio
+        const [height, width] = tensor.shape
+        const scale = IMAGE_SIZE / Math.max(height, width)
+        const newHeight = Math.round(height * scale)
+        const newWidth = Math.round(width * scale)
+        
+        const resized = tf.image.resizeBilinear(tensor, [newHeight, newWidth])
+        
+        // Pad to square if needed
+        const padTop = Math.floor((IMAGE_SIZE - newHeight) / 2)
+        const padBottom = IMAGE_SIZE - newHeight - padTop
+        const padLeft = Math.floor((IMAGE_SIZE - newWidth) / 2)
+        const padRight = IMAGE_SIZE - newWidth - padLeft
+        
+        const padded = tf.pad(resized, [
+          [padTop, padBottom],
+          [padLeft, padRight],
+          [0, 0]
+        ])
+
+        // Normalize to [0, 1]
+        return padded.div(255.0).expandDims(0)
       })
     } catch (error) {
       console.error('Image preprocessing failed:', error)
@@ -79,7 +121,10 @@ export class IdentificationService {
       const img = new Image()
       img.crossOrigin = 'anonymous'
       img.onload = () => resolve(img)
-      img.onerror = () => reject(new Error('Failed to load image'))
+      img.onerror = (error) => {
+        console.error('Image loading failed:', error)
+        reject(new Error('Failed to load image'))
+      }
       img.src = url
     })
   }
@@ -91,7 +136,12 @@ export class IdentificationService {
     try {
       const model = await this.loadModel()
       preprocessed = await this.preprocessImage(imageUrl)
-      predictions = model.predict(preprocessed) as tf.Tensor
+
+      // Get predictions
+      predictions = tf.tidy(() => {
+        const pred = model.predict(preprocessed!) as tf.Tensor
+        return pred.softmax()
+      })
 
       const probabilities = await predictions.data() as Float32Array
       const topK = 3
@@ -111,6 +161,7 @@ export class IdentificationService {
       // Cleanup tensors
       if (preprocessed) preprocessed.dispose()
       if (predictions) predictions.dispose()
+      tf.disposeVariables()
     }
   }
 } 
