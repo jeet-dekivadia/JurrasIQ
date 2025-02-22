@@ -20,22 +20,29 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
   const { toast } = useToast()
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !containerRef.current || mapRef.current) return
+    if (typeof window === 'undefined') return
 
     const initMap = async () => {
+      if (!containerRef.current || mapRef.current) return
+
       setIsLoading(true)
       try {
         // Import Leaflet dynamically
         const L = (await import('leaflet')).default
 
+        // Wait for container to be ready
+        await new Promise(resolve => setTimeout(resolve, 100))
+
         // Initialize map
-        mapRef.current = L.map(containerRef.current).setView([20, 0], 2)
+        const map = L.map(containerRef.current)
+        mapRef.current = map
+        map.setView([20, 0], 2)
 
         // Add tile layer
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
           attribution: '© OpenStreetMap contributors'
-        }).addTo(mapRef.current)
+        }).addTo(map)
 
         // Load fossil data
         const response = await fetch('/api/fossils')
@@ -72,24 +79,24 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
             0.8: 'yellow',
             1.0: 'red'
           }
-        }).addTo(mapRef.current)
+        }).addTo(map)
 
         // Handle location selection
-        mapRef.current.on('click', (e: L.LeafletMouseEvent) => {
+        map.on('click', (e: L.LeafletMouseEvent) => {
           if (isCustomLocation) {
             const { lat, lng } = e.latlng
             
             if (markerRef.current) {
               markerRef.current.setLatLng([lat, lng])
             } else {
-              markerRef.current = L.marker([lat, lng]).addTo(mapRef.current!)
+              markerRef.current = L.marker([lat, lng]).addTo(map)
             }
 
             onLocationSelect?.({ lat, lng })
           } else {
             // Show fossil info popup
             const nearbyFossils = fossilData.filter(location => {
-              const distance = mapRef.current!.distance(
+              const distance = map.distance(
                 [location.latitude, location.longitude],
                 [e.latlng.lat, e.latlng.lng]
               )
@@ -106,7 +113,7 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
                     <p>Types found: ${Array.from(new Set(nearbyFossils.map(f => f.fossilType))).slice(0, 3).join(', ')}...</p>
                   </div>
                 `)
-                .openOn(mapRef.current!)
+                .openOn(map)
             }
           }
         })
@@ -162,6 +169,7 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
 
   return (
     <div className="relative w-full h-[80vh]">
+      <div ref={containerRef} className="absolute inset-0 z-0" />
       <div className="absolute top-4 right-4 z-[1000]">
         <button
           onClick={() => setIsCustomLocation(!isCustomLocation)}
@@ -170,7 +178,6 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
           {isCustomLocation ? 'View Heatmap' : 'Use Your Location'}
         </button>
       </div>
-      <div ref={containerRef} className="w-full h-full rounded-lg" />
     </div>
   )
 } 
