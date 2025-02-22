@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { MapView } from "@/components/map-view"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2 } from "lucide-react"
 
@@ -34,39 +33,37 @@ export default function AnalysisPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-4xl font-bold mb-8">Site Analysis</h1>
+    <div className="container mx-auto py-4 space-y-6">
+      <h1 className="text-4xl font-bold">Site Analysis</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Select Location</CardTitle>
+            <CardTitle>Interactive Fossil Map</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             <MapView onLocationSelect={handleLocationSelect} />
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Analysis Results</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="flex items-center justify-center p-8">
-                <Loader2 className="h-8 w-8 animate-spin" />
-              </div>
-            ) : analysis ? (
-              <div className="prose dark:prose-invert">
-                <p>{analysis}</p>
-              </div>
-            ) : (
-              <p className="text-muted-foreground">
-                Select a location on the map to analyze fossil potential
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        {(loading || analysis) && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Analysis Results</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex items-center justify-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : (
+                <div className="prose dark:prose-invert">
+                  <p>{analysis}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )

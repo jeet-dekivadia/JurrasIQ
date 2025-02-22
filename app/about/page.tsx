@@ -33,9 +33,9 @@ export default function AboutPage() {
           <p>
             For inquiries about our platform or partnership opportunities, reach out to us at:
             <br />
-            Email: contact@jurrasiq.com
+            Email: jdekivadia3@gatech.edu
             <br />
-            Phone: (555) 123-4567
+            Phone: 678-998-1234
           </p>
         </div>
       </div>
