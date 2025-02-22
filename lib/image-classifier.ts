@@ -12,13 +12,16 @@ const CLASS_NAMES = [
 
 export class ImageClassifier {
   private model: tf.LayersModel | null = null
+  private initialized = false
 
   async initialize() {
-    if (this.model) return
+    if (this.initialized) return
 
     try {
       // Load the model
       this.model = await tf.loadLayersModel('/models/dino_species_model/model.json')
+      this.initialized = true
+      console.log('Model loaded successfully')
     } catch (error) {
       console.error('Failed to load model:', error)
       throw new Error('Failed to initialize image classifier')
@@ -29,8 +32,8 @@ export class ImageClassifier {
     className: string
     confidence: number
   }> {
-    if (!this.model) {
-      throw new Error('Model not initialized')
+    if (!this.initialized || !this.model) {
+      throw new Error('Model not initialized. Call initialize() first.')
     }
 
     try {
@@ -40,6 +43,8 @@ export class ImageClassifier {
       // Make prediction
       const predictions = await this.model.predict(processedImage) as tf.Tensor
       const scores = await predictions.data()
+      
+      // Cleanup
       predictions.dispose()
       processedImage.dispose()
 
@@ -47,13 +52,17 @@ export class ImageClassifier {
       const maxScore = Math.max(...Array.from(scores))
       const maxIndex = scores.indexOf(maxScore)
 
+      if (maxScore < 0.5) {
+        throw new Error('Low confidence in classification result')
+      }
+
       return {
         className: CLASS_NAMES[maxIndex],
         confidence: maxScore
       }
     } catch (error) {
       console.error('Classification failed:', error)
-      throw new Error('Failed to classify image')
+      throw error
     }
   }
 
@@ -63,6 +72,7 @@ export class ImageClassifier {
       const image = await sharp(imageBuffer)
         .resize(224, 224, { fit: 'cover' })
         .removeAlpha()
+        .toColorspace('srgb')
         .raw()
         .toBuffer()
 

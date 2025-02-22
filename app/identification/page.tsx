@@ -69,7 +69,7 @@ export default function IdentificationPage() {
       const formData = new FormData()
       formData.append('image', selectedImage)
 
-      const response = await fetch('/api/ai/identify', {
+      const response = await fetch('/api/identification', {
         method: 'POST',
         body: formData
       })
