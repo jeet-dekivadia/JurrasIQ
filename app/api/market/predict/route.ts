@@ -15,12 +15,20 @@ export async function POST(req: Request) {
     }
 
     // Run Python script
-    const prediction = await runPythonPredictor(fossilFamily, bodyPart)
-    return NextResponse.json(prediction)
+    try {
+      const prediction = await runPythonPredictor(fossilFamily, bodyPart)
+      return NextResponse.json(prediction)
+    } catch (error) {
+      console.error('Prediction process error:', error)
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : 'Prediction failed' },
+        { status: 500 }
+      )
+    }
   } catch (error) {
     console.error('Market prediction failed:', error)
     return NextResponse.json(
-      { error: 'Failed to predict market value' },
+      { error: 'Failed to process request' },
       { status: 500 }
     )
   }
@@ -44,16 +52,23 @@ async function runPythonPredictor(fossilFamily: string, bodyPart: string): Promi
     ])
 
     pythonProcess.stdout.on('data', (data) => {
-      stdoutData += data.toString()
+      const text = data.toString()
+      console.log('Python stdout:', text)
+      stdoutData += text
     })
 
     pythonProcess.stderr.on('data', (data) => {
-      stderrData += data.toString()
+      const text = data.toString()
+      console.log('Python stderr:', text)
+      stderrData += text
     })
 
     pythonProcess.on('close', (code) => {
+      console.log('Python process exited with code:', code)
+      console.log('Final stdout:', stdoutData)
+      console.log('Final stderr:', stderrData)
+
       if (code !== 0) {
-        console.error('Python process error:', stderrData)
         try {
           const errorData = JSON.parse(stderrData)
           reject(new Error(errorData.error || 'Python process failed'))
@@ -64,19 +79,24 @@ async function runPythonPredictor(fossilFamily: string, bodyPart: string): Promi
       }
 
       try {
-        if (!stdoutData.trim()) {
+        const output = stdoutData.trim()
+        if (!output) {
           throw new Error('No output from Python script')
         }
-        const prediction = JSON.parse(stdoutData)
+        const prediction = JSON.parse(output)
+        if (!prediction.median && prediction.median !== 0) {
+          throw new Error('Invalid prediction format')
+        }
         resolve(prediction)
       } catch (e) {
-        console.error('Failed to parse Python output:', e, 'Output:', stdoutData)
+        console.error('Parse error:', e)
+        console.error('Raw stdout:', stdoutData)
         reject(new Error('Failed to parse prediction results'))
       }
     })
 
     pythonProcess.on('error', (error) => {
-      console.error('Failed to start Python process:', error)
+      console.error('Process error:', error)
       reject(new Error('Failed to start prediction process'))
     })
   })

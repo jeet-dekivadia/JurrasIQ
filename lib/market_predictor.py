@@ -61,26 +61,30 @@ def estimate_fossil_value_range(pipeline, fossil_family: str, body_part: str):
     """
     Estimate value range for a fossil
     """
-    input_data = pd.DataFrame({
-        "Fossil Family": [fossil_family],
-        "Body part": [body_part]
-    })
-    
-    # Transform input data
-    transformed_data = pipeline.named_steps['preprocessor'].transform(input_data)
-    
-    # Get predictions from all trees
-    predictions = [
-        estimator.predict(transformed_data)[0]
-        for estimator in pipeline.named_steps['regressor'].estimators_
-    ]
-    
-    # Calculate statistics
-    median = np.median(predictions)
-    lower = np.percentile(predictions, 10)
-    upper = np.percentile(predictions, 90)
-    
-    return float(median), float(lower), float(upper)
+    try:
+        input_data = pd.DataFrame({
+            "Fossil Family": [fossil_family],
+            "Body part": [body_part]
+        })
+        
+        # Transform input data
+        transformed_data = pipeline.named_steps['preprocessor'].transform(input_data)
+        
+        # Get predictions from all trees
+        predictions = [
+            float(estimator.predict(transformed_data)[0])  # Ensure float values
+            for estimator in pipeline.named_steps['regressor'].estimators_
+        ]
+        
+        # Calculate statistics
+        median = float(np.median(predictions))
+        lower = float(np.percentile(predictions, 10))
+        upper = float(np.percentile(predictions, 90))
+        
+        return median, lower, upper
+    except Exception as e:
+        print(f"Debug: Value range error: {str(e)}", file=sys.stderr)
+        raise
 
 def main():
     """
@@ -94,20 +98,12 @@ def main():
         fossil_family = sys.argv[1]
         body_part = sys.argv[2]
         
+        print("Debug: Starting prediction for", fossil_family, body_part, file=sys.stderr)
+        
         # Load model and make prediction
         pipeline, families, parts = load_and_train_model()
         
-        # If empty inputs, just return available options
-        if not fossil_family or not body_part:
-            result = {
-                "median": 0,
-                "lowerBound": 0,
-                "upperBound": 0,
-                "availableFamilies": families,
-                "availableBodyParts": parts
-            }
-            print(json.dumps(result))
-            return 0
+        print("Debug: Model loaded successfully", file=sys.stderr)
         
         # Validate inputs
         if fossil_family not in families:
@@ -117,24 +113,36 @@ def main():
         
         try:
             # Get prediction
+            print("Debug: Making prediction...", file=sys.stderr)
             median, lower, upper = estimate_fossil_value_range(pipeline, fossil_family, body_part)
             
             # Return results
             result = {
-                "median": median,
-                "lowerBound": lower,
-                "upperBound": upper,
+                "median": float(median),
+                "lowerBound": float(lower),
+                "upperBound": float(upper),
                 "availableFamilies": families,
                 "availableBodyParts": parts
             }
-            print(json.dumps(result))
+            
+            # Ensure we're printing valid JSON
+            json_output = json.dumps(result)
+            print("Debug: JSON output:", json_output, file=sys.stderr)
+            print(json_output)  # Print to stdout for the API
             return 0
+            
         except Exception as e:
-            print(json.dumps({"error": f"Prediction failed: {str(e)}"}), file=sys.stderr)
+            print(f"Debug: Prediction error: {str(e)}", file=sys.stderr)
+            error_json = json.dumps({"error": f"Prediction failed: {str(e)}"})
+            print("Debug: Error JSON:", error_json, file=sys.stderr)
+            print(error_json, file=sys.stderr)
             return 1
             
     except Exception as e:
-        print(json.dumps({"error": str(e)}), file=sys.stderr)
+        print(f"Debug: Main error: {str(e)}", file=sys.stderr)
+        error_json = json.dumps({"error": str(e)})
+        print("Debug: Error JSON:", error_json, file=sys.stderr)
+        print(error_json, file=sys.stderr)
         return 1
 
 if __name__ == "__main__":
