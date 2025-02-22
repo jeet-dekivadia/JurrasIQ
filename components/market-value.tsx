@@ -1,35 +1,24 @@
 "use client"
 
-import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect } from 'react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { Loader2, DollarSign } from "lucide-react"
+import { Loader2, DollarSign, Info } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
-
-const FOSSIL_FAMILIES = [
-  "Tyrannosauridae",
-  "Ceratopsidae",
-  "Hadrosauridae",
-  "Allosauridae",
-  "Diplodocidae",
-  "Stegosauridae",
-  // Add more from your dataset
-]
-
-const BODY_PARTS = [
-  "Skull",
-  "Skeleton",
-  "Partial skeleton",
-  "Femur",
-  "Nest with eggs",
-  // Add more from your dataset
-]
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface MarketPrediction {
   median: number
   lowerBound: number
   upperBound: number
+  availableFamilies: string[]
+  availableBodyParts: string[]
 }
 
 export function MarketValue() {
@@ -57,13 +46,17 @@ export function MarketValue() {
         body: JSON.stringify({ fossilFamily, bodyPart })
       })
 
-      if (!response.ok) throw new Error('Prediction failed')
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Prediction failed')
+      }
+      
       const data = await response.json()
       setPrediction(data)
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to get market prediction. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to get market prediction",
         variant: "destructive"
       })
     } finally {
@@ -86,6 +79,9 @@ export function MarketValue() {
           <DollarSign className="h-5 w-5" />
           Market Value Estimation
         </CardTitle>
+        <CardDescription>
+          Estimate the market value of fossils based on historical data
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
@@ -95,7 +91,7 @@ export function MarketValue() {
               <SelectValue placeholder="Select fossil family" />
             </SelectTrigger>
             <SelectContent>
-              {FOSSIL_FAMILIES.map(family => (
+              {prediction?.availableFamilies?.map(family => (
                 <SelectItem key={family} value={family}>
                   {family}
                 </SelectItem>
@@ -111,7 +107,7 @@ export function MarketValue() {
               <SelectValue placeholder="Select body part" />
             </SelectTrigger>
             <SelectContent>
-              {BODY_PARTS.map(part => (
+              {prediction?.availableBodyParts?.map(part => (
                 <SelectItem key={part} value={part}>
                   {part}
                 </SelectItem>
@@ -144,7 +140,19 @@ export function MarketValue() {
               </div>
             </div>
             <div className="flex justify-between text-sm text-muted-foreground">
-              <div>Range:</div>
+              <div className="flex items-center gap-1">
+                Range
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-4 w-4" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>80% confidence interval based on model predictions</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <div>
                 {formatCurrency(prediction.lowerBound)} - {formatCurrency(prediction.upperBound)}
               </div>

@@ -1,38 +1,116 @@
 import sys
 import json
-from typing import Tuple, Dict
 import pandas as pd
 import numpy as np
+from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from pathlib import Path
 
-# Your existing model code here...
-
-def main(fossil_family: str, body_part: str) -> Dict:
+def load_and_train_model():
     """
-    Main function to handle prediction requests.
-    Returns JSON-formatted prediction results.
+    Load data and train the prediction model
+    """
+    # Get the absolute path to the CSV file
+    file_path = Path(__file__).parent.parent / "Dinosaur_Fossil_Transactions.csv"
+    
+    # Load and preprocess the dataset
+    df = pd.read_csv(file_path)
+    df["Original Cost"] = df["Original Cost"].str.replace('$', '').str.replace(',', '').astype(float)
+    df["Adjusted Cost"] = df["Adjusted Cost"].str.replace('$', '').str.replace(',', '').astype(float)
+
+    # Define features and target
+    X = df[["Fossil Family", "Body part"]]
+    y = df["Adjusted Cost"]
+
+    # Create preprocessing pipeline
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('cat', OneHotEncoder(handle_unknown='ignore'), ["Fossil Family", "Body part"])
+        ]
+    )
+
+    # Create and train pipeline
+    pipeline = Pipeline([
+        ('preprocessor', preprocessor),
+        ('regressor', RandomForestRegressor(
+            n_estimators=200,
+            max_depth=15,
+            min_samples_split=5,
+            min_samples_leaf=2,
+            random_state=42
+        ))
+    ])
+
+    # Train the model
+    pipeline.fit(X, y)
+    return pipeline, df["Fossil Family"].unique().tolist(), df["Body part"].unique().tolist()
+
+def estimate_fossil_value_range(pipeline, fossil_family: str, body_part: str):
+    """
+    Estimate value range for a fossil
+    """
+    input_data = pd.DataFrame({
+        "Fossil Family": [fossil_family],
+        "Body part": [body_part]
+    })
+    
+    # Transform input data
+    transformed_data = pipeline.named_steps['preprocessor'].transform(input_data)
+    
+    # Get predictions from all trees
+    predictions = [
+        estimator.predict(transformed_data)[0]
+        for estimator in pipeline.named_steps['regressor'].estimators_
+    ]
+    
+    # Calculate statistics
+    median = np.median(predictions)
+    lower = np.percentile(predictions, 10)
+    upper = np.percentile(predictions, 90)
+    
+    return float(median), float(lower), float(upper)
+
+def main():
+    """
+    Main function to handle prediction requests
     """
     try:
-        median, lower, upper = estimate_fossil_value_range(fossil_family, body_part)
+        # Validate arguments
+        if len(sys.argv) != 3:
+            raise ValueError("Invalid number of arguments")
+        
+        fossil_family = sys.argv[1]
+        body_part = sys.argv[2]
+        
+        # Load model and make prediction
+        pipeline, families, parts = load_and_train_model()
+        
+        # Validate inputs
+        if fossil_family not in families:
+            raise ValueError(f"Unknown fossil family: {fossil_family}")
+        if body_part not in parts:
+            raise ValueError(f"Unknown body part: {body_part}")
+        
+        # Get prediction
+        median, lower, upper = estimate_fossil_value_range(pipeline, fossil_family, body_part)
+        
+        # Return results
         result = {
-            "median": float(median),
-            "lowerBound": float(lower),
-            "upperBound": float(upper)
+            "median": median,
+            "lowerBound": lower,
+            "upperBound": upper,
+            "availableFamilies": families,
+            "availableBodyParts": parts
         }
         print(json.dumps(result))
         return 0
+        
     except Exception as e:
         print(json.dumps({"error": str(e)}), file=sys.stderr)
         return 1
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print(json.dumps({"error": "Invalid arguments"}), file=sys.stderr)
-        sys.exit(1)
-    
-    fossil_family = sys.argv[1]
-    body_part = sys.argv[2]
-    sys.exit(main(fossil_family, body_part)) 
+    sys.exit(main()) 
