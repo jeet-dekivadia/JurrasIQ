@@ -1,11 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import * as React from 'react'
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Loader2, Upload } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+
+interface AnalysisResponse {
+  analysis: string;
+  error?: string;
+  details?: string;
+}
 
 export default function IdentificationPage() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
@@ -17,6 +24,25 @@ export default function IdentificationPage() {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+
+    // Validate file type and size
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select an image file",
+        variant: "destructive"
+      })
+      return
+    }
+
+    if (file.size > 20 * 1024 * 1024) { // 20MB limit
+      toast({
+        title: "File too large",
+        description: "Please select an image under 20MB",
+        variant: "destructive"
+      })
+      return
+    }
 
     // Preview image
     const reader = new FileReader()
@@ -49,17 +75,27 @@ export default function IdentificationPage() {
         body: formData
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        throw new Error('Failed to analyze image')
+        throw new Error(data.error || data.details || 'Failed to analyze image')
       }
 
-      const data = await response.json()
+      if (!data.analysis) {
+        throw new Error('No analysis received')
+      }
+
       setAnalysis(data.analysis)
+      toast({
+        title: "Analysis Complete",
+        description: "Your fossil has been analyzed successfully!",
+      })
+
     } catch (error) {
       console.error('Error:', error)
       toast({
         title: "Error",
-        description: "Failed to analyze the image. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to analyze the image. Please try again.",
         variant: "destructive"
       })
     } finally {

@@ -45,7 +45,7 @@
     "embla-carousel-react": "8.5.1",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
-    "next": "14.2.16",
+    "next": "^14.2.0",
     "next-themes": "latest",
     "react": "^18",
     "react-day-picker": "8.10.1",
@@ -59,8 +59,8 @@
     "vaul": "^0.9.6",
     "zod": "^3.24.1",
     "@emotion/is-prop-valid": "latest",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
     "framer-motion": "latest",
     "react-intersection-observer": "latest",
     "leaflet": "^1.9.4",
@@ -68,7 +68,11 @@
     "leaflet.heat": "^0.2.0",
     "csv-parse": "^5.5.3",
     "openai": "^4.28.0",
-    "@tailwindcss/typography": "^0.5.10"
+    "@tailwindcss/typography": "^0.5.10",
+    "@types/node": "^20.0.0",
+    "sharp": "^0.33.0",
+    "@types/leaflet.heat": "^0.2.3",
+    "typescript": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
