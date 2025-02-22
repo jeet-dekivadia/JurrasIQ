@@ -78,7 +78,8 @@
     "@tensorflow/tfjs": "^4.17.0",
     "@tensorflow/tfjs-converter": "^4.17.0",
     "@tensorflow/tfjs-backend-webgl": "^4.17.0",
-    "@tensorflow/tfjs-backend-cpu": "^4.17.0"
+    "@tensorflow/tfjs-backend-cpu": "^4.17.0",
+    "pdf-lib": "^1.17.1"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

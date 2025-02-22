@@ -21,6 +21,10 @@ export class IdentificationService {
   private openai: OpenAI
 
   constructor() {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OpenAI API key is not configured')
+    }
+    
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     })
@@ -28,19 +32,23 @@ export class IdentificationService {
 
   async identify(imageUrl: string): Promise<PredictionResult[]> {
     try {
+      const base64Image = imageUrl.split(',')[1]
+
       const response = await this.openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-4-vision-preview",
         messages: [
           {
             role: "system",
-            content: "You are an expert paleontologist. When shown a fossil image, identify the type of fossil and the body part in a concise way. Respond with only the fossil type and body part, nothing else."
+            content: "You are an expert paleontologist. When shown a fossil image, identify the type of fossil and the body part in a concise way."
           },
           {
             role: "user",
             content: [
               {
                 type: "image_url",
-                image_url: imageUrl
+                image_url: {
+                  url: `data:image/jpeg;base64,${base64Image}`
+                }
               },
               {
                 type: "text",
@@ -54,10 +62,9 @@ export class IdentificationService {
 
       const prediction = response.choices[0]?.message?.content || "Unknown fossil"
       
-      // Return in the expected format
       return [{
         class: prediction,
-        probability: 100 // Since GPT doesn't provide confidence scores
+        probability: 100
       }]
 
     } catch (error) {
