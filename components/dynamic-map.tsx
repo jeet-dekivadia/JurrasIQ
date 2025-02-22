@@ -25,14 +25,7 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
 
         // Import dependencies
         const L = (await import('leaflet')).default;
-
-        // Load the pre-generated heatmap HTML
-        const response = await fetch('/map/fossil_heatmap.html');
-        const html = await response.text();
-        
-        // Extract the heatmap data from the HTML
-        const heatmapDataMatch = html.match(/L\.heatLayer\((.*?)\)/s);
-        const heatmapData = heatmapDataMatch ? JSON.parse(heatmapDataMatch[1]) : [];
+        await import('leaflet.heat');
 
         // Create map
         const map = L.map(containerRef.current).setView([20, 0], 2);
@@ -44,8 +37,20 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
           attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
+        // Load fossil data
+        const response = await fetch('/api/fossils');
+        if (!response.ok) throw new Error('Failed to load fossil data');
+        const fossilData: FossilLocation[] = await response.json();
+
+        // Create heatmap data
+        const heatData = fossilData.map(loc => [
+          loc.latitude,
+          loc.longitude,
+          Math.min(10, loc.significance) // Normalize significance for heatmap intensity
+        ]);
+
         // Add heatmap layer
-        L.heatLayer(heatmapData, {
+        const heat = (L as any).heatLayer(heatData, {
           radius: 25,
           blur: 15,
           maxZoom: 10,
@@ -141,6 +146,7 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
         <div 
           ref={containerRef} 
           className="absolute inset-0 z-0 rounded-lg"
+          style={{ background: '#f0f0f0' }}
         />
       </div>
 
