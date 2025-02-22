@@ -2,39 +2,37 @@ import sys
 import json
 import pandas as pd
 import numpy as np
+from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from pathlib import Path
 
-def load_data():
-    """Load and preprocess the dataset"""
+def load_and_train_model():
+    """
+    Load data and train the prediction model
+    """
+    # Get the absolute path to the CSV file
     file_path = Path(__file__).parent.parent / "Dinosaur_Fossil_Transactions.csv"
+    
+    # Load and preprocess the dataset
     df = pd.read_csv(file_path)
     df["Original Cost"] = df["Original Cost"].str.replace('$', '').str.replace(',', '').astype(float)
     df["Adjusted Cost"] = df["Adjusted Cost"].str.replace('$', '').str.replace(',', '').astype(float)
-    return df
 
-def get_options():
-    """Get available fossil families and body parts"""
-    df = load_data()
-    return {
-        "families": sorted(df["Fossil Family"].unique().tolist()),
-        "bodyParts": sorted(df["Body part"].unique().tolist())
-    }
-
-def train_model(df):
-    """Train the prediction model"""
+    # Define features and target
     X = df[["Fossil Family", "Body part"]]
     y = df["Adjusted Cost"]
 
+    # Create preprocessing pipeline
     preprocessor = ColumnTransformer(
         transformers=[
             ('cat', OneHotEncoder(handle_unknown='ignore'), ["Fossil Family", "Body part"])
         ]
     )
 
+    # Create and train pipeline
     pipeline = Pipeline([
         ('preprocessor', preprocessor),
         ('regressor', RandomForestRegressor(
@@ -46,62 +44,66 @@ def train_model(df):
         ))
     ])
 
+    # Train the model
     pipeline.fit(X, y)
-    return pipeline
+    return pipeline, df["Fossil Family"].unique().tolist(), df["Body part"].unique().tolist()
 
-def predict_value(pipeline, fossil_family: str, body_part: str):
-    """Make a prediction for a specific fossil"""
+def estimate_fossil_value_range(pipeline, fossil_family: str, body_part: str):
+    """
+    Estimate value range for a fossil
+    """
     input_data = pd.DataFrame({
         "Fossil Family": [fossil_family],
         "Body part": [body_part]
     })
     
+    # Transform input data
     transformed_data = pipeline.named_steps['preprocessor'].transform(input_data)
+    
+    # Get predictions from all trees
     predictions = [
         estimator.predict(transformed_data)[0]
         for estimator in pipeline.named_steps['regressor'].estimators_
     ]
     
-    median = float(np.median(predictions))
-    lower = float(np.percentile(predictions, 10))
-    upper = float(np.percentile(predictions, 90))
+    # Calculate statistics
+    median = np.median(predictions)
+    lower = np.percentile(predictions, 10)
+    upper = np.percentile(predictions, 90)
     
-    return median, lower, upper
+    return float(median), float(lower), float(upper)
 
 def main():
-    """Main function to handle requests"""
+    """
+    Main function to handle prediction requests
+    """
     try:
-        # Check if we're just getting options
-        if len(sys.argv) == 2 and sys.argv[1] == '--get-options':
-            options = get_options()
-            print(json.dumps(options))
-            return 0
-
-        # Otherwise, handle prediction request
+        # Validate arguments
         if len(sys.argv) != 3:
-            raise ValueError("Invalid arguments")
+            raise ValueError("Invalid number of arguments")
         
         fossil_family = sys.argv[1]
         body_part = sys.argv[2]
         
-        # Load data and validate inputs
-        df = load_data()
-        valid_families = df["Fossil Family"].unique()
-        valid_parts = df["Body part"].unique()
+        # Load model and make prediction
+        pipeline, families, parts = load_and_train_model()
         
-        if fossil_family not in valid_families:
+        # Validate inputs
+        if fossil_family not in families:
             raise ValueError(f"Unknown fossil family: {fossil_family}")
-        if body_part not in valid_parts:
+        if body_part not in parts:
             raise ValueError(f"Unknown body part: {body_part}")
         
-        # Train model and make prediction
-        pipeline = train_model(df)
-        median, lower, upper = predict_value(pipeline, fossil_family, body_part)
+        # Get prediction
+        median, lower, upper = estimate_fossil_value_range(pipeline, fossil_family, body_part)
         
+        # Return results
         result = {
             "median": median,
             "lowerBound": lower,
-            "upperBound": upper
+            "upperBound": upper,
+            "availableFamilies": families,
+            "availableBodyParts": parts
         }
         print(json.dumps(result))
         return 0
