@@ -26,7 +26,30 @@ export function MarketValue() {
   const [bodyPart, setBodyPart] = useState<string>("")
   const [prediction, setPrediction] = useState<MarketPrediction | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [availableOptions, setAvailableOptions] = useState<{
+    families: string[]
+    bodyParts: string[]
+  } | null>(null)
   const { toast } = useToast()
+
+  // Load available options when component mounts
+  useEffect(() => {
+    const loadOptions = async () => {
+      try {
+        const response = await fetch('/api/market/options')
+        if (!response.ok) throw new Error('Failed to load options')
+        const data = await response.json()
+        setAvailableOptions(data)
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load fossil options. Please refresh the page.",
+          variant: "destructive"
+        })
+      }
+    }
+    loadOptions()
+  }, [toast])
 
   const handlePredict = async () => {
     if (!fossilFamily || !bodyPart) {
@@ -72,6 +95,18 @@ export function MarketValue() {
     }).format(value)
   }
 
+  if (!availableOptions) {
+    return (
+      <Card>
+        <CardContent className="py-10">
+          <div className="flex justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -91,7 +126,7 @@ export function MarketValue() {
               <SelectValue placeholder="Select fossil family" />
             </SelectTrigger>
             <SelectContent>
-              {prediction?.availableFamilies?.map(family => (
+              {availableOptions.families.map(family => (
                 <SelectItem key={family} value={family}>
                   {family}
                 </SelectItem>
@@ -107,7 +142,7 @@ export function MarketValue() {
               <SelectValue placeholder="Select body part" />
             </SelectTrigger>
             <SelectContent>
-              {prediction?.availableBodyParts?.map(part => (
+              {availableOptions.bodyParts.map(part => (
                 <SelectItem key={part} value={part}>
                   {part}
                 </SelectItem>
@@ -130,7 +165,7 @@ export function MarketValue() {
         </Button>
 
         {prediction && (
-          <div className="mt-4 space-y-2">
+          <div className="mt-4 space-y-2 p-4 bg-muted/50 rounded-lg">
             <div className="text-center">
               <div className="text-2xl font-bold text-primary">
                 {formatCurrency(prediction.median)}
