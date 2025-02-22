@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Check, MapPin } from 'lucide-react'
+import { Check, MapPin, Loader2 } from 'lucide-react'
 import { PDFDocument, StandardFonts } from 'pdf-lib'
 
 interface ExcavationSite {
@@ -27,38 +27,77 @@ export function ExcavationSiteCard({ site }: { site: ExcavationSite }) {
   const [isGenerating, setIsGenerating] = useState(false)
 
   const generatePDF = async () => {
+    if (isGenerating) return
+    
     setIsGenerating(true)
     try {
+      // Get excavation plan
       const response = await fetch('/api/excavation/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(site)
       })
 
-      const data = await response.json()
+      if (!response.ok) {
+        throw new Error('Failed to generate plan')
+      }
+
+      const { report } = await response.json()
       
       // Create PDF
       const pdfDoc = await PDFDocument.create()
       const page = pdfDoc.addPage()
       const { width, height } = page.getSize()
       const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
+      const fontSize = 12
+      const lineHeight = 14
+      const margin = 50
 
       // Add header
       page.drawText(`Excavation Plan: ${site.location.city}, ${site.location.state}`, {
-        x: 50,
-        y: height - 50,
+        x: margin,
+        y: height - margin,
         size: 20,
         font
       })
 
-      // Add content
-      let yPosition = height - 100
-      Object.entries(data.report).forEach(([key, value]) => {
-        yPosition -= 30
-        page.drawText(`${key}: ${value}`, {
-          x: 50,
-          y: yPosition,
-          size: 12,
+      // Add site details
+      let y = height - margin - 40
+      const details = [
+        `Location: ${site.location.city}, ${site.location.county}, ${site.location.state}`,
+        `Fossil Type: ${site.fossilType}`,
+        `Environment: ${site.environment}`,
+        `Age: ${site.age.start} - ${site.age.end} million years ago`,
+        `Distance: ${site.distance.toFixed(2)}km`,
+        '',
+        'Excavation Details:'
+      ]
+
+      details.forEach(text => {
+        page.drawText(text, {
+          x: margin,
+          y,
+          size: fontSize,
+          font
+        })
+        y -= lineHeight
+      })
+
+      // Add report content
+      Object.entries(report).forEach(([key, value]) => {
+        y -= lineHeight * 1.5
+        page.drawText(`${key}:`, {
+          x: margin,
+          y,
+          size: fontSize,
+          font,
+          color: rgb(0.4, 0.4, 0.4)
+        })
+        y -= lineHeight
+        page.drawText(String(value), {
+          x: margin + 10,
+          y,
+          size: fontSize,
           font
         })
       })
@@ -72,9 +111,12 @@ export function ExcavationSiteCard({ site }: { site: ExcavationSite }) {
       link.href = url
       link.download = `excavation_plan_${site.location.city.toLowerCase()}.pdf`
       link.click()
+      window.URL.revokeObjectURL(url)
 
+      setIsSelected(true)
     } catch (error) {
       console.error('Failed to generate plan:', error)
+      alert('Failed to generate excavation plan')
     } finally {
       setIsGenerating(false)
     }
@@ -86,14 +128,14 @@ export function ExcavationSiteCard({ site }: { site: ExcavationSite }) {
         variant="ghost"
         size="icon"
         className={`absolute right-2 top-2 ${isSelected ? 'text-green-500' : 'text-gray-400'}`}
-        onClick={() => {
-          setIsSelected(!isSelected)
-          if (!isSelected) {
-            generatePDF()
-          }
-        }}
+        onClick={generatePDF}
+        disabled={isGenerating}
       >
-        <Check className="h-5 w-5" />
+        {isGenerating ? (
+          <Loader2 className="h-5 w-5 animate-spin" />
+        ) : (
+          <Check className="h-5 w-5" />
+        )}
       </Button>
 
       <div className="space-y-3">
