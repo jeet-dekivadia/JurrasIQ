@@ -1,91 +1,76 @@
 "use client"
 
-import * as React from "react"
-import { MapView } from "@/components/map-view"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2 } from "lucide-react"
-
-interface AnalysisResult {
-  analysis: string;
-  score: number;
-  nearbyFossils: number;
-}
+import { useState, useEffect } from 'react'
+import { ExcavationSiteCard } from '@/components/excavation-site-card'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Search } from 'lucide-react'
 
 export default function AnalysisPage() {
-  const [loading, setLoading] = React.useState(false)
-  const [result, setResult] = React.useState<AnalysisResult | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sites, setSites] = useState([])
+  const [loading, setLoading] = useState(false)
 
-  const handleLocationSelect = async (location: { lat: number; lng: number }) => {
+  const searchSites = async (query: string) => {
     setLoading(true)
     try {
-      const response = await fetch('/api/ai/analyze', {
+      const response = await fetch('/api/excavation/search', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: 'analyze_location',
-          data: location
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
       })
-      
-      if (!response.ok) {
-        throw new Error('Analysis failed')
-      }
-
       const data = await response.json()
-      setResult(data)
+      
+      // Get detailed information for each site
+      const sitesWithDetails = await Promise.all(
+        data.sites.map(async (site: any) => {
+          const detailsResponse = await fetch('/api/excavation/details', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              latitude: site.location.coordinates[0],
+              longitude: site.location.coordinates[1],
+              fossilType: site.fossilType,
+              age: site.age.start
+            })
+          })
+          const { details } = await detailsResponse.json()
+          return { ...site, details }
+        })
+      )
+      
+      setSites(sitesWithDetails)
     } catch (error) {
-      console.error('Analysis failed:', error)
+      console.error('Failed to search sites:', error)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="container mx-auto py-4 space-y-6">
-      <h1 className="text-4xl font-bold">Site Analysis</h1>
+    <div className="container py-8">
+      <h1 className="text-3xl font-bold mb-8">Site Analysis</h1>
       
-      <div className="grid grid-cols-1 gap-6">
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle>Interactive Fossil Map</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 min-h-[80vh]">
-            <MapView onLocationSelect={handleLocationSelect} />
-          </CardContent>
-        </Card>
+      <div className="flex gap-2 mb-8">
+        <Input
+          placeholder="Search location..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="max-w-sm"
+        />
+        <Button 
+          onClick={() => searchSites(searchQuery)}
+          disabled={loading}
+        >
+          <Search className="h-4 w-4 mr-2" />
+          Search
+        </Button>
+      </div>
 
-        {(loading || result) && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Analysis Results</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="flex items-center justify-center p-8">
-                  <Loader2 className="h-8 w-8 animate-spin" />
-                </div>
-              ) : result && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-muted rounded-lg">
-                      <div className="text-sm text-muted-foreground">Potential Score</div>
-                      <div className="text-2xl font-bold">{result.score.toFixed(1)}/10</div>
-                    </div>
-                    <div className="p-4 bg-muted rounded-lg">
-                      <div className="text-sm text-muted-foreground">Nearby Sites</div>
-                      <div className="text-2xl font-bold">{result.nearbyFossils}</div>
-                    </div>
-                  </div>
-                  <div className="prose dark:prose-invert">
-                    <p>{result.analysis}</p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {sites.map((site) => (
+          <ExcavationSiteCard key={site.id} site={site} />
+        ))}
       </div>
     </div>
   )
