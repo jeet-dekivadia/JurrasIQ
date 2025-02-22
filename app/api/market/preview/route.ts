@@ -12,11 +12,24 @@ export async function GET() {
     // Parse CSV
     const records = parse(fileContent, {
       columns: true,
-      skip_empty_lines: true
+      skip_empty_lines: true,
+      trim: true,
+      cast: true
     })
 
-    // Return first 30 records
-    return NextResponse.json(records.slice(0, 30))
+    // Format the first 30 records
+    const previewData = records.slice(0, 30).map((record: any) => ({
+      'Fossil Family': record['Fossil Family'] || '',
+      'Body part': record['Body part'] || '',
+      'Original Cost': typeof record['Original Cost'] === 'string' 
+        ? record['Original Cost']
+        : `$${record['Original Cost'].toLocaleString()}`,
+      'Adjusted Cost': typeof record['Adjusted Cost'] === 'string'
+        ? record['Adjusted Cost']
+        : `$${record['Adjusted Cost'].toLocaleString()}`
+    }))
+
+    return NextResponse.json(previewData)
   } catch (error) {
     console.error('Failed to load preview data:', error)
     return NextResponse.json(
