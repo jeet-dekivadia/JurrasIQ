@@ -1,6 +1,10 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error('Missing OpenAI API Key');
+}
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });

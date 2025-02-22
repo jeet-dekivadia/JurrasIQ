@@ -1,6 +1,7 @@
 import type React from "react"
 // Simplified version of the use-toast hook
 import { useState } from "react"
+import { useToast as useToastBase } from "@/components/ui/toast"
 
 type Toast = {
   id: string
@@ -23,4 +24,6 @@ export function useToast() {
     },
   }
 }
+
+export const toast = useToastBase()
 
