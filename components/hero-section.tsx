@@ -25,7 +25,7 @@ export function HeroSection() {
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage: `url(https://hebbkx1anhila5yf.public.blob.vercel-storage.com/dino.jpg-ni9ld0PlU6uGeiYuIRwB5NBqkt9WNU.jpeg)`,
+          backgroundImage: `url(https://4kwallpapers.com/images/wallpapers/allosaurus-dinosaur-rocks-3840x2160-13444.jpg)`,
           backgroundAttachment: "fixed",
         }}
       >
