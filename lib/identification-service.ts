@@ -13,12 +13,27 @@ const IMAGE_SIZE = 224
 
 export class IdentificationService {
   private model: tf.LayersModel | null = null
+  private modelLoading: Promise<tf.LayersModel> | null = null
 
   async loadModel() {
     if (this.model) return this.model
+    
+    if (!this.modelLoading) {
+      this.modelLoading = (async () => {
+        try {
+          await tf.ready()
+          const model = await tf.loadLayersModel('/model/model.json')
+          this.model = model
+          return model
+        } catch (error) {
+          console.error('Failed to load model:', error)
+          this.modelLoading = null
+          throw new Error('Failed to load identification model')
+        }
+      })()
+    }
 
-    this.model = await tf.loadLayersModel('/model/model.json')
-    return this.model
+    return this.modelLoading
   }
 
   async preprocessImage(imageUrl: string): Promise<tf.Tensor> {

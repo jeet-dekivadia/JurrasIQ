@@ -23,7 +23,6 @@ export default function IdentificationPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Preview image
     const reader = new FileReader()
     reader.onloadend = () => {
       setImagePreview(reader.result as string)
