@@ -1,6 +1,6 @@
 "use client"
 
-import * as React from "react"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -14,10 +14,10 @@ interface AnalysisResponse {
 }
 
 export default function IdentificationPage() {
-  const [selectedImage, setSelectedImage] = React.useState<File | null>(null)
-  const [imagePreview, setImagePreview] = React.useState<string | null>(null)
-  const [analysis, setAnalysis] = React.useState<string | null>(null)
-  const [isLoading, setIsLoading] = React.useState(false)
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [analysis, setAnalysis] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
