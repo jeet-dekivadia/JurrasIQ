@@ -18,6 +18,9 @@ def load_and_train_model():
     
     # Load and preprocess the dataset
     df = pd.read_csv(file_path)
+    print(f"Loaded {len(df)} records") # Debug log
+    
+    # Clean the cost columns
     df["Original Cost"] = df["Original Cost"].str.replace('$', '').str.replace(',', '').astype(float)
     df["Adjusted Cost"] = df["Adjusted Cost"].str.replace('$', '').str.replace(',', '').astype(float)
 
@@ -25,14 +28,14 @@ def load_and_train_model():
     X = df[["Fossil Family", "Body part"]]
     y = df["Adjusted Cost"]
 
-    # Create preprocessing pipeline
+    # Create preprocessing pipeline with improved handling
     preprocessor = ColumnTransformer(
         transformers=[
-            ('cat', OneHotEncoder(handle_unknown='ignore'), ["Fossil Family", "Body part"])
+            ('cat', OneHotEncoder(handle_unknown='ignore', sparse=False), ["Fossil Family", "Body part"])
         ]
     )
 
-    # Create and train pipeline
+    # Create and train pipeline with better parameters
     pipeline = Pipeline([
         ('preprocessor', preprocessor),
         ('regressor', RandomForestRegressor(
@@ -40,13 +43,19 @@ def load_and_train_model():
             max_depth=15,
             min_samples_split=5,
             min_samples_leaf=2,
+            n_jobs=-1,  # Use all CPU cores
             random_state=42
         ))
     ])
 
-    # Train the model
+    # Train the model on all data
     pipeline.fit(X, y)
-    return pipeline, df["Fossil Family"].unique().tolist(), df["Body part"].unique().tolist()
+    
+    # Get unique values for dropdowns
+    families = sorted(df["Fossil Family"].unique().tolist())
+    parts = sorted(df["Body part"].unique().tolist())
+    
+    return pipeline, families, parts
 
 def estimate_fossil_value_range(pipeline, fossil_family: str, body_part: str):
     """
@@ -87,6 +96,18 @@ def main():
         
         # Load model and make prediction
         pipeline, families, parts = load_and_train_model()
+        
+        # If empty inputs, just return available options
+        if not fossil_family or not body_part:
+            result = {
+                "median": 0,
+                "lowerBound": 0,
+                "upperBound": 0,
+                "availableFamilies": families,
+                "availableBodyParts": parts
+            }
+            print(json.dumps(result))
+            return 0
         
         # Validate inputs
         if fossil_family not in families:

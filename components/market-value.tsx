@@ -39,20 +39,18 @@ export function MarketValue() {
   useEffect(() => {
     const loadOptions = async () => {
       try {
-        const response = await fetch('/api/market/predict', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fossilFamily: "", bodyPart: "" })
-        })
-
+        const response = await fetch('/api/market/options')
         if (!response.ok) throw new Error('Failed to load options')
+        
         const data = await response.json()
+        if (data.error) throw new Error(data.error)
         
         setOptions({
-          families: data.availableFamilies || [],
-          bodyParts: data.availableBodyParts || []
+          families: data.families || [],
+          bodyParts: data.bodyParts || []
         })
       } catch (error) {
+        console.error('Failed to load options:', error)
         toast({
           title: "Error",
           description: "Failed to load fossil options. Please refresh the page.",
