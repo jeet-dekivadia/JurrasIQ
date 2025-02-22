@@ -47,11 +47,11 @@ export default function AnalysisPage() {
       <h1 className="text-4xl font-bold">Site Analysis</h1>
       
       <div className="grid grid-cols-1 gap-6">
-        <Card>
+        <Card className="w-full">
           <CardHeader>
             <CardTitle>Interactive Fossil Map</CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-0 min-h-[80vh]">
             <MapView onLocationSelect={handleLocationSelect} />
           </CardContent>
         </Card>
