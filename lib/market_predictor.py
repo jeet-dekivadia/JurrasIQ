@@ -115,20 +115,24 @@ def main():
         if body_part not in parts:
             raise ValueError(f"Unknown body part: {body_part}")
         
-        # Get prediction
-        median, lower, upper = estimate_fossil_value_range(pipeline, fossil_family, body_part)
-        
-        # Return results
-        result = {
-            "median": median,
-            "lowerBound": lower,
-            "upperBound": upper,
-            "availableFamilies": families,
-            "availableBodyParts": parts
-        }
-        print(json.dumps(result))
-        return 0
-        
+        try:
+            # Get prediction
+            median, lower, upper = estimate_fossil_value_range(pipeline, fossil_family, body_part)
+            
+            # Return results
+            result = {
+                "median": median,
+                "lowerBound": lower,
+                "upperBound": upper,
+                "availableFamilies": families,
+                "availableBodyParts": parts
+            }
+            print(json.dumps(result))
+            return 0
+        except Exception as e:
+            print(json.dumps({"error": f"Prediction failed: {str(e)}"}), file=sys.stderr)
+            return 1
+            
     except Exception as e:
         print(json.dumps({"error": str(e)}), file=sys.stderr)
         return 1

@@ -30,37 +30,54 @@ async function runPythonPredictor(fossilFamily: string, bodyPart: string): Promi
   median: number
   lowerBound: number
   upperBound: number
+  availableFamilies?: string[]
+  availableBodyParts?: string[]
 }> {
   return new Promise((resolve, reject) => {
+    let stdoutData = '';
+    let stderrData = '';
+
     const pythonProcess = spawn('python', [
       join(process.cwd(), 'lib/market_predictor.py'),
       fossilFamily,
       bodyPart
     ])
 
-    let result = ''
-    let error = ''
-
     pythonProcess.stdout.on('data', (data) => {
-      result += data.toString()
+      stdoutData += data.toString()
     })
 
     pythonProcess.stderr.on('data', (data) => {
-      error += data.toString()
+      stderrData += data.toString()
     })
 
     pythonProcess.on('close', (code) => {
       if (code !== 0) {
-        reject(new Error(`Python process failed: ${error}`))
+        console.error('Python process error:', stderrData)
+        try {
+          const errorData = JSON.parse(stderrData)
+          reject(new Error(errorData.error || 'Python process failed'))
+        } catch {
+          reject(new Error(stderrData || 'Python process failed'))
+        }
         return
       }
 
       try {
-        const prediction = JSON.parse(result)
+        if (!stdoutData.trim()) {
+          throw new Error('No output from Python script')
+        }
+        const prediction = JSON.parse(stdoutData)
         resolve(prediction)
       } catch (e) {
-        reject(new Error('Failed to parse Python output'))
+        console.error('Failed to parse Python output:', e, 'Output:', stdoutData)
+        reject(new Error('Failed to parse prediction results'))
       }
+    })
+
+    pythonProcess.on('error', (error) => {
+      console.error('Failed to start Python process:', error)
+      reject(new Error('Failed to start prediction process'))
     })
   })
 } 

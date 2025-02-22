@@ -80,14 +80,23 @@ export function MarketValue() {
         body: JSON.stringify({ fossilFamily, bodyPart })
       })
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Prediction failed')
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Empty response received')
       }
-      
-      const data = await response.json()
-      setPrediction(data)
+
+      try {
+        const data = JSON.parse(text)
+        if (data.error) {
+          throw new Error(data.error)
+        }
+        setPrediction(data)
+      } catch (e) {
+        console.error('JSON parse error:', e, 'Raw text:', text)
+        throw new Error('Failed to parse prediction results')
+      }
     } catch (error) {
+      console.error('Prediction failed:', error)
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to get market prediction",
