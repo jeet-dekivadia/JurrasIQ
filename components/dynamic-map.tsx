@@ -36,20 +36,24 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
         const L = (await import('leaflet')).default;
         await import('leaflet.heat');
 
-        // Create map with dark theme
+        // Create map with light theme and better controls
         const map = L.map(containerRef.current, {
           center: [20, 0],
-          zoom: 2,
-          zoomControl: false, // We'll add it manually for better positioning
-          worldCopyJump: true
+          zoom: 3,
+          zoomControl: false,
+          worldCopyJump: true,
+          minZoom: 2,
+          maxBounds: L.latLngBounds(L.latLng(-90, -180), L.latLng(90, 180)),
+          maxBoundsViscosity: 1.0
         });
         
         mapRef.current = map;
 
-        // Add custom tile layer (Mapbox Dark theme - you can replace with your preferred style)
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        // Add light theme tile layer
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
           attribution: '©OpenStreetMap, ©CartoDB',
-          maxZoom: 19
+          maxZoom: 19,
+          subdomains: 'abcd'
         }).addTo(map);
 
         // Add zoom control to top-right
@@ -57,30 +61,37 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
           position: 'topright'
         }).addTo(map);
 
+        // Add scale control
+        L.control.scale({
+          imperial: false,
+          position: 'bottomright'
+        }).addTo(map);
+
         // Load and add heatmap
         const response = await fetch('/api/fossils');
         if (!response.ok) throw new Error('Failed to load fossil data');
         const fossilData: FossilLocation[] = await response.json();
 
+        // Create more precise heatmap data
         const heatData = fossilData.map(loc => [
           loc.latitude,
           loc.longitude,
-          Math.min(10, loc.significance)
+          Math.min(8, loc.significance * 0.8) // Reduce intensity
         ]);
 
         const heat = (L as any).heatLayer(heatData, {
-          radius: 20,
-          blur: 15,
-          maxZoom: 10,
-          max: 10,
+          radius: 15, // Smaller radius
+          blur: 20,
+          maxZoom: 12,
+          max: 8,
           gradient: {
-            0.2: '#3b82f6',
-            0.4: '#84cc16',
-            0.6: '#facc15',
-            0.8: '#f97316',
-            1.0: '#ef4444'
+            0.1: '#fee2e2', // Very light red
+            0.3: '#fca5a5', // Light red
+            0.5: '#f87171', // Medium red
+            0.7: '#ef4444', // Red
+            0.9: '#dc2626'  // Dark red
           },
-          minOpacity: 0.4
+          minOpacity: 0.3
         }).addTo(map);
 
         setIsLoading(false);

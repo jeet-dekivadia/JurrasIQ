@@ -171,46 +171,84 @@
 
 /* Map Styles */
 .user-marker {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: #3b82f6;
-  border: 3px solid white;
-  box-shadow: 0 0 0 2px #3b82f6;
+  background: #2563eb;
+  border: 2px solid white;
+  box-shadow: 0 0 0 2px #2563eb, 0 0 8px rgba(0, 0, 0, 0.3);
 }
 
 .site-marker {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: #f97316;
-  border: 3px solid white;
-  box-shadow: 0 0 0 2px #f97316;
+  background: #dc2626;
+  border: 2px solid white;
+  box-shadow: 0 0 0 2px #dc2626, 0 0 8px rgba(0, 0, 0, 0.3);
 }
 
 .fossil-popup .leaflet-popup-content-wrapper {
-  background: rgba(17, 17, 17, 0.95);
-  color: white;
+  background: white;
+  color: #1f2937;
   border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
 }
 
 .fossil-popup .leaflet-popup-tip {
-  background: rgba(17, 17, 17, 0.95);
+  background: white;
 }
 
 .site-popup {
-  padding: 10px;
+  padding: 12px;
 }
 
 .site-popup h3 {
-  margin: 0 0 10px;
-  color: #f97316;
-  font-weight: bold;
+  margin: 0 0 12px;
+  color: #dc2626;
+  font-weight: 600;
+  font-size: 1.1em;
 }
 
 .site-popup p {
-  margin: 5px 0;
-  font-size: 0.9em;
+  margin: 8px 0;
+  font-size: 0.95em;
+  line-height: 1.4;
+}
+
+/* Add styles for the distance line */
+.distance-line {
+  stroke-dasharray: 5, 10;
+  animation: dash 20s linear infinite;
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -1000;
+  }
+}
+
+/* Improve map controls */
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.leaflet-control-zoom a {
+  background-color: white !important;
+  color: #4b5563 !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background-color: #f3f4f6 !important;
+  color: #1f2937 !important;
+}
+
+.leaflet-control-scale {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  padding: 2px 5px !important;
+  border-radius: 4px !important;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1) !important;
 }
 
