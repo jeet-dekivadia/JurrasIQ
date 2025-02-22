@@ -28,19 +28,24 @@ export class IdentificationService {
 
   async identify(imageUrl: string): Promise<PredictionResult[]> {
     try {
+      // Convert base64 URL to base64 string if needed
+      const base64Image = imageUrl.split(',')[1]
+
       const response = await this.openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-4o",  // Note: gpt-4o-mini doesn't support vision
         messages: [
           {
             role: "system",
-            content: "You are an expert paleontologist. When shown a fossil image, identify the type of fossil and the body part in a concise way. Respond with only the fossil type and body part, nothing else."
+            content: "You are an expert paleontologist. When shown a fossil image, identify the type of fossil and the body part in a concise way."
           },
           {
             role: "user",
             content: [
               {
                 type: "image_url",
-                image_url: imageUrl
+                image_url: {
+                  url: `data:image/jpeg;base64,${base64Image}`
+                }
               },
               {
                 type: "text",
@@ -54,10 +59,9 @@ export class IdentificationService {
 
       const prediction = response.choices[0]?.message?.content || "Unknown fossil"
       
-      // Return in the expected format
       return [{
         class: prediction,
-        probability: 100 // Since GPT doesn't provide confidence scores
+        probability: 100
       }]
 
     } catch (error) {
