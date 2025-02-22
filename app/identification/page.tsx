@@ -7,16 +7,16 @@ import { Button } from "@/components/ui/button"
 import { Loader2, Upload } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 
-interface AnalysisResponse {
-  analysis: string;
-  error?: string;
-  details?: string;
+interface IdentificationResult {
+  species: string
+  confidence: number
+  description: string
 }
 
 export default function IdentificationPage() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [analysis, setAnalysis] = useState<string | null>(null)
+  const [result, setResult] = useState<IdentificationResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
@@ -51,7 +51,7 @@ export default function IdentificationPage() {
     reader.readAsDataURL(file)
 
     setSelectedImage(file)
-    setAnalysis(null)
+    setResult(null)
   }
 
   const handleSubmit = async () => {
@@ -80,11 +80,15 @@ export default function IdentificationPage() {
         throw new Error(data.error || data.details || 'Failed to analyze image')
       }
 
-      if (!data.analysis) {
+      if (!data.species) {
         throw new Error('No analysis received')
       }
 
-      setAnalysis(data.analysis)
+      setResult({
+        species: data.species,
+        confidence: data.confidence,
+        description: data.description
+      })
       toast({
         title: "Analysis Complete",
         description: "Your fossil has been analyzed successfully!",
@@ -151,7 +155,7 @@ export default function IdentificationPage() {
           </CardContent>
         </Card>
 
-        {(isLoading || analysis) && (
+        {(isLoading || result) && (
           <Card>
             <CardHeader>
               <CardTitle>Analysis Results</CardTitle>
@@ -161,9 +165,9 @@ export default function IdentificationPage() {
                 <div className="flex items-center justify-center p-8">
                   <Loader2 className="h-8 w-8 animate-spin" />
                 </div>
-              ) : analysis && (
+              ) : result && (
                 <div className="prose dark:prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap">{analysis}</div>
+                  <div className="whitespace-pre-wrap">{result.description}</div>
                 </div>
               )}
             </CardContent>
