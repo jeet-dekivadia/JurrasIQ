@@ -21,10 +21,6 @@ export class IdentificationService {
   private openai: OpenAI
 
   constructor() {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OpenAI API key is not configured')
-    }
-    
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     })
@@ -32,10 +28,11 @@ export class IdentificationService {
 
   async identify(imageUrl: string): Promise<PredictionResult[]> {
     try {
+      // Convert base64 URL to base64 string if needed
       const base64Image = imageUrl.split(',')[1]
 
       const response = await this.openai.chat.completions.create({
-        model: "gpt-4-vision-preview",
+        model: "gpt-4o",  // Note: gpt-4o-mini doesn't support vision
         messages: [
           {
             role: "system",
