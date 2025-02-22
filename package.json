@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "prepare-model": "node scripts/prepare-model.js"
+    "prepare-model": "ts-node scripts/prepare-model.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
