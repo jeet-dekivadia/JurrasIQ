@@ -7,6 +7,7 @@ import { SearchLocation } from "@/components/search-location"
 import type { FossilLocation } from '@/lib/load-fossil-data'
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import Script from 'next/script'
 
 interface DynamicMapProps {
   onLocationSelect?: (location: { lat: number; lng: number }) => void;
@@ -36,34 +37,42 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
         const L = (await import('leaflet')).default;
         await import('leaflet.heat');
 
-        // Create map with light theme and better controls
+        // Create map centered on USA
         const map = L.map(containerRef.current, {
-          center: [20, 0],
-          zoom: 3,
+          center: [39.8283, -98.5795],
+          zoom: 4,
           zoomControl: false,
-          worldCopyJump: true,
-          minZoom: 2,
+          minZoom: 3,
           maxBounds: L.latLngBounds(L.latLng(-90, -180), L.latLng(90, 180)),
           maxBoundsViscosity: 1.0
         });
         
         mapRef.current = map;
 
-        // Add light theme tile layer
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-          attribution: '©OpenStreetMap, ©CartoDB',
-          maxZoom: 19,
-          subdomains: 'abcd'
+        // Add base terrain layer
+        L.tileLayer('https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.jpg', {
+          attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>',
+          maxZoom: 18
         }).addTo(map);
 
-        // Add zoom control to top-right
+        // Add OSM Buildings layer
+        const osmb = (window as any).OSMBuildings(map).load();
+
+        // Add light labels on top
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+          attribution: '©OpenStreetMap, ©CartoDB',
+          subdomains: 'abcd',
+          maxZoom: 19
+        }).addTo(map);
+
+        // Add controls
         L.control.zoom({
           position: 'topright'
         }).addTo(map);
 
-        // Add scale control
         L.control.scale({
-          imperial: false,
+          imperial: true,
+          metric: true,
           position: 'bottomright'
         }).addTo(map);
 
@@ -72,27 +81,36 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
         if (!response.ok) throw new Error('Failed to load fossil data');
         const fossilData: FossilLocation[] = await response.json();
 
-        // Create more precise heatmap data
-        const heatData = fossilData.map(loc => [
-          loc.latitude,
-          loc.longitude,
-          Math.min(8, loc.significance * 0.8) // Reduce intensity
-        ]);
+        // Process data for better heatmap visualization
+        const heatData = fossilData.map(loc => ({
+          lat: loc.latitude,
+          lng: loc.longitude,
+          intensity: Math.min(5, loc.significance)
+        })).filter(point => point.lat && point.lng);
 
-        const heat = (L as any).heatLayer(heatData, {
-          radius: 15, // Smaller radius
-          blur: 20,
-          maxZoom: 12,
-          max: 8,
-          gradient: {
-            0.1: '#fee2e2', // Very light red
-            0.3: '#fca5a5', // Light red
-            0.5: '#f87171', // Medium red
-            0.7: '#ef4444', // Red
-            0.9: '#dc2626'  // Dark red
-          },
-          minOpacity: 0.3
-        }).addTo(map);
+        // Create heatmap layer with better settings
+        const heat = (L as any).heatLayer(
+          heatData.map(point => [point.lat, point.lng, point.intensity]),
+          {
+            radius: 25,
+            blur: 35,
+            maxZoom: 10,
+            max: 5,
+            gradient: {
+              0.0: 'rgba(0,0,255,0)',
+              0.2: 'rgba(0,0,255,0.7)',
+              0.4: 'rgba(0,255,255,0.7)',
+              0.6: 'rgba(0,255,0,0.7)',
+              0.8: 'rgba(255,255,0,0.7)',
+              1.0: 'rgba(255,0,0,0.7)'
+            },
+            minOpacity: 0.3
+          }
+        ).addTo(map);
+
+        // Add time control for building shadows
+        const now = new Date();
+        osmb.date(now);
 
         setIsLoading(false);
       } catch (error) {
@@ -251,62 +269,69 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <SearchLocation 
-          onLocationSelect={handleLocationSelect}
-          isLoading={isLoading}
-        />
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[1fr,300px]">
-        <div className="relative w-full h-[70vh] rounded-lg overflow-hidden">
-          {isLoading && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-muted/50">
-              <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-          )}
-          <div 
-            ref={containerRef} 
-            className="absolute inset-0 z-0"
+    <>
+      <Script 
+        src="https://cdn.osmbuildings.org/classic/0.2.2b/OSMBuildings-Leaflet.js" 
+        strategy="beforeInteractive"
+      />
+      
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <SearchLocation 
+            onLocationSelect={handleLocationSelect}
+            isLoading={isLoading}
           />
         </div>
 
-        {nearbyLocations.length > 0 && (
-          <div className="space-y-4 lg:h-[70vh] lg:overflow-auto p-4 bg-card rounded-lg">
-            <h3 className="text-lg font-semibold sticky top-0 bg-card pb-2">
-              Nearby Excavation Sites
-            </h3>
-            {nearbyLocations.map((site, index) => (
-              <Card
-                key={index}
-                className={`p-4 transition-colors cursor-pointer hover:bg-accent ${
-                  selectedSite === site ? 'border-primary' : ''
-                }`}
-                onClick={() => handleSiteSelect(site)}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <MapPin className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold">Site #{index + 1}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {site.distance?.toFixed(2)} km away
-                    </p>
-                    <p className="text-sm mt-1">
-                      <span className="font-medium">Fossils:</span> {site.fossilType.split(',')[0]}...
-                    </p>
-                    <p className="text-sm">
-                      <span className="font-medium">Age:</span> {site.age_start} - {site.age_end} Mya
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            ))}
+        <div className="grid gap-6 lg:grid-cols-[1fr,300px]">
+          <div className="relative w-full h-[70vh] rounded-lg overflow-hidden">
+            {isLoading && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-muted/50">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            )}
+            <div 
+              ref={containerRef} 
+              className="absolute inset-0 z-0"
+            />
           </div>
-        )}
+
+          {nearbyLocations.length > 0 && (
+            <div className="space-y-4 lg:h-[70vh] lg:overflow-auto p-4 bg-card rounded-lg">
+              <h3 className="text-lg font-semibold sticky top-0 bg-card pb-2">
+                Nearby Excavation Sites
+              </h3>
+              {nearbyLocations.map((site, index) => (
+                <Card
+                  key={index}
+                  className={`p-4 transition-colors cursor-pointer hover:bg-accent ${
+                    selectedSite === site ? 'border-primary' : ''
+                  }`}
+                  onClick={() => handleSiteSelect(site)}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <MapPin className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold">Site #{index + 1}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {site.distance?.toFixed(2)} km away
+                      </p>
+                      <p className="text-sm mt-1">
+                        <span className="font-medium">Fossils:</span> {site.fossilType.split(',')[0]}...
+                      </p>
+                      <p className="text-sm">
+                        <span className="font-medium">Age:</span> {site.age_start} - {site.age_end} Mya
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 } 

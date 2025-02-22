@@ -24,11 +24,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <title>JurrasIQ</title>
         <link 
           rel="stylesheet" 
-          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-          crossOrigin=""
+          href="https://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css"
         />
       </head>
       <body className={cn("min-h-screen bg-background font-sans antialiased", inter.className)}>
