@@ -6,10 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "@/components/ui/use-toast"
 
 export default function IdentificationPage() {
-  const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [image, setImage] = useState<File | null>(null)
   const [description, setDescription] = useState("")
@@ -18,9 +17,9 @@ export default function IdentificationPage() {
     e.preventDefault()
     if (!image || !description) {
       toast({
+        variant: "destructive",
         title: "Missing Information",
         description: "Please provide both an image and description",
-        variant: "destructive",
       })
       return
     }
@@ -43,9 +42,9 @@ export default function IdentificationPage() {
       })
     } catch (error) {
       toast({
+        variant: "destructive",
         title: "Analysis Failed",
         description: "Please try again later",
-        variant: "destructive",
       })
     } finally {
       setLoading(false)
