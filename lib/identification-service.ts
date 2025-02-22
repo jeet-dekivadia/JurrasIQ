@@ -20,8 +20,8 @@ const CLASSES = [
 const IMAGE_SIZE = 224 // Standard input size for many CNN models
 
 export class IdentificationService {
-  private model: tf.GraphModel | null = null
-  private modelLoading: Promise<tf.GraphModel> | null = null
+  private model: tf.LayersModel | null = null
+  private modelLoading: Promise<tf.LayersModel> | null = null
 
   async loadModel() {
     if (this.model) return this.model
@@ -34,8 +34,8 @@ export class IdentificationService {
           await tf.ready()
           console.log('Using WebGL backend')
           
-          // Load model from the identification folder
-          const model = await tf.loadGraphModel('/identification/model/model.json')
+          // Load the converted model
+          const model = await tf.loadLayersModel('/identification/model/model.json')
           
           // Warm up the model
           const dummyInput = tf.zeros([1, IMAGE_SIZE, IMAGE_SIZE, 3])
@@ -52,7 +52,7 @@ export class IdentificationService {
             await tf.ready()
             console.log('Falling back to CPU backend')
             
-            const model = await tf.loadGraphModel('/identification/model/model.json')
+            const model = await tf.loadLayersModel('/identification/model/model.json')
             this.model = model
             return model
           } catch (cpuError) {

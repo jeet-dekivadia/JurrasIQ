@@ -1,6 +1,6 @@
-import * as tf from '@tensorflow/tfjs-node'
 import { existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
+import { execSync } from 'child_process'
 
 async function prepareModel() {
   try {
@@ -10,14 +10,10 @@ async function prepareModel() {
       mkdirSync(modelDir, { recursive: true })
     }
 
-    // Load your trained model
-    const modelPath = join(process.cwd(), 'identification', 'model.h5')
-    const model = await tf.loadLayersModel(`file://${modelPath}`)
-
-    // Save as tfjs format
-    const outputPath = join(modelDir, 'model.json')
-    await model.save(`file://${outputPath}`)
-
+    // Run Python conversion script
+    console.log('Converting model...')
+    execSync('python scripts/convert_model.py', { stdio: 'inherit' })
+    
     console.log('Model prepared successfully')
   } catch (error) {
     console.error('Failed to prepare model:', error)
