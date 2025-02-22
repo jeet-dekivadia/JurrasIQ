@@ -1,4 +1,10 @@
 import * as tf from '@tensorflow/tfjs'
+import '@tensorflow/tfjs-backend-webgl'
+
+interface PredictionResult {
+  class: string
+  probability: number
+}
 
 const CLASSES = [
   'Ammonites',
@@ -7,13 +13,14 @@ const CLASSES = [
   'Leaf fossils',
   'Trilobites',
   'Corals'
-]
+] as const
 
 const IMAGE_SIZE = 224
 
 export class IdentificationService {
   private model: tf.LayersModel | null = null
   private modelLoading: Promise<tf.LayersModel> | null = null
+  private modelPath = '/model/model.json'
 
   async loadModel() {
     if (this.model) return this.model
@@ -21,8 +28,22 @@ export class IdentificationService {
     if (!this.modelLoading) {
       this.modelLoading = (async () => {
         try {
+          // Initialize WebGL backend
+          await tf.setBackend('webgl')
           await tf.ready()
-          const model = await tf.loadLayersModel('/model/model.json')
+          
+          // Check if model exists
+          try {
+            const response = await fetch(this.modelPath)
+            if (!response.ok) {
+              throw new Error('Model not found')
+            }
+          } catch (error) {
+            throw new Error('Failed to find model file')
+          }
+
+          // Load model
+          const model = await tf.loadLayersModel(this.modelPath)
           this.model = model
           return model
         } catch (error) {
@@ -37,23 +58,20 @@ export class IdentificationService {
   }
 
   async preprocessImage(imageUrl: string): Promise<tf.Tensor> {
-    // Load image
-    const img = await this.loadImage(imageUrl)
-    
-    // Convert to tensor
-    const tensor = tf.browser.fromPixels(img)
-    
-    // Resize
-    const resized = tf.image.resizeBilinear(tensor, [IMAGE_SIZE, IMAGE_SIZE])
-    
-    // Normalize and add batch dimension
-    const normalized = resized.div(255.0).expandDims(0)
-    
-    // Cleanup
-    tensor.dispose()
-    resized.dispose()
-    
-    return normalized
+    try {
+      const img = await this.loadImage(imageUrl)
+      
+      return tf.tidy(() => {
+        // Convert to tensor and normalize
+        const tensor = tf.browser.fromPixels(img)
+        const resized = tf.image.resizeBilinear(tensor, [IMAGE_SIZE, IMAGE_SIZE])
+        const normalized = resized.div(255.0)
+        return normalized.expandDims(0)
+      })
+    } catch (error) {
+      console.error('Image preprocessing failed:', error)
+      throw new Error('Failed to process image')
+    }
   }
 
   private loadImage(url: string): Promise<HTMLImageElement> {
@@ -61,29 +79,26 @@ export class IdentificationService {
       const img = new Image()
       img.crossOrigin = 'anonymous'
       img.onload = () => resolve(img)
-      img.onerror = (e) => reject(e)
+      img.onerror = () => reject(new Error('Failed to load image'))
       img.src = url
     })
   }
 
-  async identify(imageUrl: string) {
+  async identify(imageUrl: string): Promise<PredictionResult[]> {
+    let preprocessed: tf.Tensor | null = null
+    let predictions: tf.Tensor | null = null
+
     try {
       const model = await this.loadModel()
-      const preprocessed = await this.preprocessImage(imageUrl)
+      preprocessed = await this.preprocessImage(imageUrl)
+      predictions = model.predict(preprocessed) as tf.Tensor
 
-      // Get predictions
-      const predictions = await model.predict(preprocessed) as tf.Tensor
-      const probabilities = await predictions.data()
-
-      // Get top 3 predictions
+      const probabilities = await predictions.data() as Float32Array
       const topK = 3
       const indices = Array.from(probabilities)
-        .map((p, i) => ({ probability: p, index: i }))
+        .map((probability, index) => ({ probability, index }))
         .sort((a, b) => b.probability - a.probability)
         .slice(0, topK)
-
-      // Cleanup
-      tf.dispose([preprocessed, predictions])
 
       return indices.map(({ probability, index }) => ({
         class: CLASSES[index],
@@ -92,6 +107,10 @@ export class IdentificationService {
     } catch (error) {
       console.error('Prediction failed:', error)
       throw new Error('Failed to analyze image')
+    } finally {
+      // Cleanup tensors
+      if (preprocessed) preprocessed.dispose()
+      if (predictions) predictions.dispose()
     }
   }
 } 
