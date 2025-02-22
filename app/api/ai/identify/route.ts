@@ -7,7 +7,8 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-export const maxDuration = 300; // Set max duration to 5 minutes
+// Set max duration to 60 seconds (Vercel hobby plan limit)
+export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {

@@ -15,8 +15,8 @@ export interface FossilLocation {
 
 export function loadFossilData(): FossilLocation[] {
   try {
-    // Use the correct path relative to the project root
-    const filePath = path.join(__dirname, '..', '..', 'data', 'fossil_data_cleaned.csv')
+    // Use public directory for deployment compatibility
+    const filePath = path.join(process.cwd(), 'public', 'data', 'fossil_data_cleaned.csv')
     const fileContent = fs.readFileSync(filePath, 'utf-8')
     
     const records = parse(fileContent, {
@@ -60,6 +60,6 @@ export function loadFossilData(): FossilLocation[] {
 
   } catch (error) {
     console.error('Error loading fossil data:', error)
-    throw error
+    return [] // Return empty array instead of throwing
   }
 } 
