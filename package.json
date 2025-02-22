@@ -63,7 +63,8 @@
     "@types/react-dom": "latest",
     "framer-motion": "latest",
     "react-intersection-observer": "latest",
-    "@googlemaps/js-api-loader": "^1.16.2",
+    "leaflet": "^1.9.4",
+    "@types/leaflet": "^1.9.8",
     "openai": "^4.28.0",
     "@tailwindcss/typography": "^0.5.10"
   },

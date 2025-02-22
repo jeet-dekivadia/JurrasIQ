@@ -1,45 +1,51 @@
 "use client"
 
 import { useEffect, useRef } from 'react'
-import { Loader } from '@googlemaps/js-api-loader'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 
 interface MapViewProps {
   onLocationSelect?: (location: { lat: number; lng: number }) => void;
 }
 
 export function MapView({ onLocationSelect }: MapViewProps) {
-  const mapRef = useRef<HTMLDivElement>(null)
-  const map = useRef<google.maps.Map | null>(null)
+  const mapRef = useRef<L.Map | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const initMap = async () => {
-      const loader = new Loader({
-        apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
-        version: "weekly",
+    if (typeof window !== 'undefined' && containerRef.current && !mapRef.current) {
+      // Initialize the map
+      mapRef.current = L.map(containerRef.current).setView([0, 0], 2)
+
+      // Add OpenStreetMap tiles
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(mapRef.current)
+
+      // Add terrain layer (optional)
+      L.tileLayer('https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.jpg', {
+        maxZoom: 18,
+      }).addTo(mapRef.current)
+
+      // Handle click events
+      mapRef.current.on('click', (e: L.LeafletMouseEvent) => {
+        if (onLocationSelect) {
+          onLocationSelect({
+            lat: e.latlng.lat,
+            lng: e.latlng.lng
+          })
+        }
       })
-
-      const { Map } = await loader.importLibrary("maps")
-
-      if (mapRef.current) {
-        map.current = new Map(mapRef.current, {
-          center: { lat: 0, lng: 0 },
-          zoom: 2,
-          mapTypeId: 'terrain'
-        })
-
-        map.current.addListener("click", (e: google.maps.MapMouseEvent) => {
-          if (onLocationSelect && e.latLng) {
-            onLocationSelect({
-              lat: e.latLng.lat(),
-              lng: e.latLng.lng()
-            })
-          }
-        })
-      }
     }
 
-    initMap()
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+    }
   }, [onLocationSelect])
 
-  return <div ref={mapRef} className="w-full h-[600px] rounded-lg" />
+  return <div ref={containerRef} className="w-full h-[600px] rounded-lg" />
 } 
