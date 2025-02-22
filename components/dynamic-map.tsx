@@ -3,9 +3,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Map as LeafletMap } from 'leaflet'
 import type { FossilLocation } from '@/lib/load-fossil-data'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
-import 'leaflet.heat'
 
 interface DynamicMapProps {
   onLocationSelect?: (location: { lat: number; lng: number }) => void;
@@ -19,31 +16,36 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
   const [isCustomLocation, setIsCustomLocation] = useState(false)
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !containerRef.current || mapRef.current) return
+    const initMap = async () => {
+      if (typeof window === 'undefined' || !containerRef.current || mapRef.current) return
 
-    // Fix Leaflet's default marker icon issue
-    const icon = L.icon({
-      iconUrl: '/marker-icon.png',
-      iconRetinaUrl: '/marker-icon-2x.png',
-      shadowUrl: '/marker-shadow.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41]
-    })
-    L.Marker.prototype.options.icon = icon
+      // Dynamically import Leaflet
+      const L = (await import('leaflet')).default
+      const { HeatLayer } = await import('leaflet.heat')
+      await import('leaflet/dist/leaflet.css')
 
-    // Initialize map
-    mapRef.current = L.map(containerRef.current, {
-      center: [0, 0],
-      zoom: 2,
-      layers: [
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors'
-        })
-      ]
-    })
+      // Fix Leaflet's default marker icon issue
+      const icon = L.icon({
+        iconUrl: '/marker-icon.png',
+        iconRetinaUrl: '/marker-icon-2x.png',
+        shadowUrl: '/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41]
+      })
+      L.Marker.prototype.options.icon = icon
 
-    // Load and add heatmap data
-    const loadHeatmapData = async () => {
+      // Initialize map
+      mapRef.current = L.map(containerRef.current, {
+        center: [0, 0],
+        zoom: 2,
+        layers: [
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+          })
+        ]
+      })
+
+      // Load and add heatmap data
       try {
         const response = await fetch('/api/fossils')
         const fossilData: FossilLocation[] = await response.json()
@@ -65,28 +67,28 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
             0.8: 'yellow',
             1.0: 'red'
           }
-        }).addTo(mapRef.current!)
+        }).addTo(mapRef.current)
       } catch (error) {
         console.error('Failed to load heatmap data:', error)
       }
+
+      // Handle click events
+      mapRef.current.on('click', (e: L.LeafletMouseEvent) => {
+        if (isCustomLocation && onLocationSelect) {
+          const { lat, lng } = e.latlng
+          
+          if (markerRef.current) {
+            markerRef.current.setLatLng([lat, lng])
+          } else {
+            markerRef.current = L.marker([lat, lng]).addTo(mapRef.current!)
+          }
+
+          onLocationSelect({ lat, lng })
+        }
+      })
     }
 
-    loadHeatmapData()
-
-    // Handle click events when custom location is enabled
-    mapRef.current.on('click', (e: L.LeafletMouseEvent) => {
-      if (isCustomLocation && onLocationSelect) {
-        const { lat, lng } = e.latlng
-        
-        if (markerRef.current) {
-          markerRef.current.setLatLng([lat, lng])
-        } else {
-          markerRef.current = L.marker([lat, lng]).addTo(mapRef.current!)
-        }
-
-        onLocationSelect({ lat, lng })
-      }
-    })
+    initMap()
 
     return () => {
       if (mapRef.current) {

@@ -1,7 +1,7 @@
 import type { NextPage } from 'next'
 import React from 'react'
 
-const AboutPage: NextPage = () => {
+export default function AboutPage() {
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-4xl font-bold mb-8">About JurrasIQ</h1>
@@ -44,6 +44,4 @@ const AboutPage: NextPage = () => {
       </div>
     </div>
   )
-}
-
-export default AboutPage 
+} 
