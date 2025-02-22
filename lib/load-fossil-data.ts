@@ -14,42 +14,47 @@ export interface FossilLocation {
 }
 
 export function loadFossilData(): FossilLocation[] {
-  const filePath = path.join(process.cwd(), 'data', 'fossil_data_cleaned.csv')
-  const fileContent = fs.readFileSync(filePath, 'utf-8')
-  
-  const records = parse(fileContent, {
-    columns: true,
-    skip_empty_lines: true
-  })
-
-  // Group fossils by location to calculate site significance
-  const locationMap = new Map<string, any[]>()
-  
-  records.forEach((record: any) => {
-    const key = `${record[0]},${record[1]}`
-    if (!locationMap.has(key)) {
-      locationMap.set(key, [])
-    }
-    locationMap.get(key)!.push(record)
-  })
-
-  // Convert grouped data to FossilLocation array
-  return Array.from(locationMap.entries()).map(([coords, fossils]) => {
-    const [lat, lng] = coords.split(',').map(Number)
-    const firstFossil = fossils[0]
+  try {
+    const filePath = path.join(process.cwd(), 'data', 'fossil_data_cleaned.csv')
+    const fileContent = fs.readFileSync(filePath, 'utf-8')
     
-    // Calculate significance based on number of fossils and age
-    const significance = Math.min(10, fossils.length * 0.5) // More fossils = higher significance
+    const records = parse(fileContent, {
+      columns: ['Latitude', 'Longitude', 'Fossil_Name', 'Early_Age', 'Late_Age', 'Environment', 'Country_Code'],
+      skip_empty_lines: true,
+      from_line: 2 // Skip header row
+    })
 
-    return {
-      latitude: lat,
-      longitude: lng,
-      fossilType: fossils.map((f: any) => f[2]).join(', '), // Join all fossil types
-      significance,
-      age_start: parseFloat(firstFossil[3]),
-      age_end: parseFloat(firstFossil[4]),
-      environment: firstFossil[5],
-      country: firstFossil[6]
-    }
-  })
+    // Group fossils by location to calculate site significance
+    const locationMap = new Map<string, any[]>()
+    
+    records.forEach((record: any) => {
+      const key = `${record.Latitude},${record.Longitude}`
+      if (!locationMap.has(key)) {
+        locationMap.set(key, [])
+      }
+      locationMap.get(key)!.push(record)
+    })
+
+    // Convert grouped data to FossilLocation array
+    return Array.from(locationMap.entries()).map(([coords, fossils]) => {
+      const [lat, lng] = coords.split(',').map(Number)
+      
+      // Calculate significance based on number of fossils and age range
+      const significance = Math.min(10, Math.sqrt(fossils.length) * 2)
+
+      return {
+        latitude: lat,
+        longitude: lng,
+        fossilType: fossils.map((f: any) => f.Fossil_Name).join(', '),
+        significance,
+        age_start: parseFloat(fossils[0].Early_Age),
+        age_end: parseFloat(fossils[0].Late_Age),
+        environment: fossils[0].Environment,
+        country: fossils[0].Country_Code
+      }
+    })
+  } catch (error) {
+    console.error('Error loading fossil data:', error)
+    return []
+  }
 } 

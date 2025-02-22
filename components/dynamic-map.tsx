@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Map as LeafletMap } from 'leaflet'
 import type { FossilLocation } from '@/lib/load-fossil-data'
 import { useToast } from "@/components/ui/use-toast"
+import { Loader2 } from "lucide-react"
 
 interface DynamicMapProps {
   onLocationSelect?: (location: { lat: number; lng: number }) => void;
@@ -15,47 +16,53 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
   const markerRef = useRef<any>(null)
   const heatmapLayerRef = useRef<any>(null)
   const [isCustomLocation, setIsCustomLocation] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
     const initMap = async () => {
       if (typeof window === 'undefined' || !containerRef.current || mapRef.current) return
 
-      // Dynamically import Leaflet
-      const L = (await import('leaflet')).default
-      await import('leaflet/dist/leaflet.css')
-      await import('leaflet.heat')
-
-      // Fix Leaflet's default marker icon issue
-      const icon = L.icon({
-        iconUrl: '/marker-icon.png',
-        iconRetinaUrl: '/marker-icon-2x.png',
-        shadowUrl: '/marker-shadow.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41]
-      })
-
-      // Initialize map
-      mapRef.current = L.map(containerRef.current, {
-        center: [20, 0],
-        zoom: 2,
-        layers: [
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap contributors'
-          })
-        ]
-      })
-
-      // Load and add heatmap data
+      setIsLoading(true)
       try {
+        // Dynamically import Leaflet
+        const L = (await import('leaflet')).default
+        await import('leaflet/dist/leaflet.css')
+        await import('leaflet.heat')
+
+        // Fix Leaflet's default marker icon issue
+        const icon = L.icon({
+          iconUrl: '/marker-icon.png',
+          iconRetinaUrl: '/marker-icon-2x.png',
+          shadowUrl: '/marker-shadow.png',
+          iconSize: [25, 41],
+          iconAnchor: [12, 41]
+        })
+
+        // Initialize map
+        mapRef.current = L.map(containerRef.current, {
+          center: [20, 0],
+          zoom: 2,
+          layers: [
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              maxZoom: 19,
+              attribution: '© OpenStreetMap contributors'
+            })
+          ]
+        })
+
+        // Load fossil data
         const response = await fetch('/api/fossils')
-        const fossilData: FossilLocation[] = await response.json()
+        if (!response.ok) {
+          throw new Error('Failed to fetch fossil data')
+        }
         
-        if (fossilData.length === 0) {
+        const fossilData: FossilLocation[] = await response.json()
+        if (!fossilData || fossilData.length === 0) {
           throw new Error('No fossil data available')
         }
 
+        // Create heatmap
         const heatmapData = fossilData.map(location => ([
           location.latitude,
           location.longitude,
@@ -150,12 +157,14 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
         })
 
       } catch (error) {
-        console.error('Failed to load heatmap data:', error)
+        console.error('Failed to initialize map:', error)
         toast({
           title: "Error",
           description: "Failed to load fossil data. Please try refreshing the page.",
           variant: "destructive"
         })
+      } finally {
+        setIsLoading(false)
       }
     }
 
@@ -168,6 +177,14 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
       }
     }
   }, [onLocationSelect, isCustomLocation, toast])
+
+  if (isLoading) {
+    return (
+      <div className="w-full h-[80vh] flex items-center justify-center bg-muted rounded-lg">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="relative w-full h-[80vh]">
