@@ -16,33 +16,39 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
   const markerRef = useRef<any>(null)
   const heatmapLayerRef = useRef<any>(null)
   const [isCustomLocation, setIsCustomLocation] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    const initMap = async () => {
-      if (!containerRef.current || mapRef.current) return
+    let isMounted = true
 
-      setIsLoading(true)
+    const initMap = async () => {
       try {
+        if (!containerRef.current || mapRef.current) return
+
         // Import Leaflet dynamically
         const L = (await import('leaflet')).default
 
-        // Wait for container to be ready
-        await new Promise(resolve => setTimeout(resolve, 100))
+        // Create map instance
+        const map = L.map(containerRef.current, {
+          center: [20, 0],
+          zoom: 2,
+          layers: [
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              maxZoom: 19,
+              attribution: '© OpenStreetMap contributors'
+            })
+          ]
+        })
 
-        // Initialize map
-        const map = L.map(containerRef.current)
+        if (!isMounted) {
+          map.remove()
+          return
+        }
+
         mapRef.current = map
-        map.setView([20, 0], 2)
-
-        // Add tile layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 19,
-          attribution: '© OpenStreetMap contributors'
-        }).addTo(map)
 
         // Load fossil data
         const response = await fetch('/api/fossils')
@@ -126,13 +132,17 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
           variant: "destructive"
         })
       } finally {
-        setIsLoading(false)
+        if (isMounted) {
+          setIsLoading(false)
+        }
       }
     }
 
-    initMap()
+    // Small delay to ensure container is ready
+    setTimeout(initMap, 100)
 
     return () => {
+      isMounted = false
       if (mapRef.current) {
         mapRef.current.remove()
         mapRef.current = null
@@ -169,11 +179,15 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
 
   return (
     <div className="relative w-full h-[80vh]">
-      <div ref={containerRef} className="absolute inset-0 z-0" />
+      <div 
+        ref={containerRef} 
+        className="absolute inset-0 z-0 rounded-lg"
+        style={{ backgroundColor: '#f0f0f0' }}
+      />
       <div className="absolute top-4 right-4 z-[1000]">
         <button
           onClick={() => setIsCustomLocation(!isCustomLocation)}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md"
+          className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md shadow-lg"
         >
           {isCustomLocation ? 'View Heatmap' : 'Use Your Location'}
         </button>
