@@ -1,78 +1,77 @@
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
-import type { Map as LeafletMap, Marker, LayerGroup, HeatLayer } from 'leaflet'
-import type { FossilLocation } from '@/lib/load-fossil-data'
 import { useToast } from "@/components/ui/use-toast"
 import { Loader2 } from "lucide-react"
+import type { FossilLocation } from '@/lib/load-fossil-data'
 
 interface DynamicMapProps {
   onLocationSelect?: (location: { lat: number; lng: number }) => void;
 }
 
 export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
-  const mapRef = useRef<LeafletMap | null>(null)
+  const mapRef = useRef<any>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const markerRef = useRef<Marker | null>(null)
-  const heatmapLayerRef = useRef<HeatLayer | null>(null)
-  const markersLayerRef = useRef<LayerGroup | null>(null)
+  const markerRef = useRef<any>(null)
+  const heatmapLayerRef = useRef<any>(null)
+  const markersLayerRef = useRef<any>(null)
   const [isCustomLocation, setIsCustomLocation] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
-  // Initialize map
   useEffect(() => {
-    if (typeof window === 'undefined') return
-
+    let map: any = null;
+    
     const initMap = async () => {
       try {
-        if (!containerRef.current || mapRef.current) return
+        if (!containerRef.current || mapRef.current) return;
 
-        // Dynamically import Leaflet
-        const L = (await import('leaflet')).default
-        const { HeatLayer } = await import('leaflet.heat')
+        // Import dependencies
+        const L = (await import('leaflet')).default;
+        await import('leaflet.heat');
 
-        // Initialize map
-        const map = L.map(containerRef.current).setView([20, 0], 2)
-        
+        // Create map
+        map = L.map(containerRef.current).setView([20, 0], 2);
+        mapRef.current = map;
+
         // Add tile layer
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
           attribution: '© OpenStreetMap contributors'
-        }).addTo(map)
+        }).addTo(map);
 
-        mapRef.current = map
-        markersLayerRef.current = L.layerGroup().addTo(map)
+        // Create markers layer
+        markersLayerRef.current = L.layerGroup().addTo(map);
 
         // Load fossil data
-        const response = await fetch('/api/fossils')
-        const fossilData: FossilLocation[] = await response.json()
+        const response = await fetch('/api/fossils');
+        if (!response.ok) throw new Error('Failed to load fossil data');
+        const fossilData: FossilLocation[] = await response.json();
 
-        // Create heatmap data
+        // Create heatmap
         const heatData = fossilData.map(loc => [
           loc.latitude,
           loc.longitude,
-          Math.min(10, loc.significance) // Normalize significance
-        ])
+          Math.min(10, loc.significance)
+        ]);
 
-        // Create and add heatmap layer
-        heatmapLayerRef.current = new HeatLayer(heatData, {
+        heatmapLayerRef.current = L.heatLayer(heatData, {
           radius: 25,
           blur: 15,
           maxZoom: 10,
           max: 10,
           gradient: {
-            0.4: '#3b82f6', // blue
-            0.6: '#84cc16', // lime
-            0.8: '#facc15', // yellow
-            1.0: '#ef4444'  // red
+            0.4: '#3b82f6',
+            0.6: '#84cc16',
+            0.8: '#facc15',
+            1.0: '#ef4444'
           }
-        }).addTo(map)
+        }).addTo(map);
 
-        // Add markers for top 10 sites
+        // Add top 10 markers
         const topSites = [...fossilData]
           .sort((a, b) => b.significance - a.significance)
-          .slice(0, 10)
+          .slice(0, 10);
 
         topSites.forEach((site, index) => {
           const marker = L.marker([site.latitude, site.longitude], {
@@ -82,9 +81,8 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
               iconSize: [30, 42],
               iconAnchor: [15, 42]
             })
-          })
+          });
 
-          // Add click handler for marker
           marker.on('click', async () => {
             try {
               const response = await fetch('/api/ai/analyze', {
@@ -101,9 +99,9 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
                     age_end: site.age_end
                   }
                 })
-              })
+              });
 
-              const data = await response.json()
+              const data = await response.json();
               
               marker.bindPopup(`
                 <div class="site-popup">
@@ -116,93 +114,80 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
               `, {
                 maxWidth: 300,
                 className: 'fossil-popup'
-              }).openPopup()
+              }).openPopup();
             } catch (error) {
-              console.error('Failed to get site analysis:', error)
+              console.error('Failed to get site analysis:', error);
               toast({
                 title: "Error",
                 description: "Failed to load site analysis",
                 variant: "destructive"
-              })
+              });
             }
-          })
+          });
 
-          marker.addTo(markersLayerRef.current!)
-        })
+          marker.addTo(markersLayerRef.current);
+        });
 
-        // Add click handler for custom location
-        map.on('click', (e) => {
-          if (!isCustomLocation) return
+        // Handle custom location selection
+        map.on('click', (e: any) => {
+          if (!isCustomLocation) return;
 
-          const { lat, lng } = e.latlng
+          const { lat, lng } = e.latlng;
 
           if (markerRef.current) {
-            map.removeLayer(markerRef.current)
+            map.removeLayer(markerRef.current);
           }
 
-          markerRef.current = L.marker([lat, lng]).addTo(map)
-          onLocationSelect?.({ lat, lng })
-        })
+          markerRef.current = L.marker([lat, lng]).addTo(map);
+          onLocationSelect?.({ lat, lng });
+        });
 
-        setIsLoading(false)
+        setIsLoading(false);
       } catch (error) {
-        console.error('Map initialization failed:', error)
+        console.error('Map initialization failed:', error);
         toast({
           title: "Error",
           description: "Failed to load the map. Please try again.",
           variant: "destructive"
-        })
+        });
       }
-    }
+    };
 
-    initMap()
+    initMap();
 
     return () => {
-      if (mapRef.current) {
-        mapRef.current.remove()
-        mapRef.current = null
+      if (map) {
+        map.remove();
+        mapRef.current = null;
       }
-    }
-  }, [isCustomLocation, onLocationSelect, toast])
+    };
+  }, [isCustomLocation, onLocationSelect, toast]);
 
-  // Handle toggle between heatmap and custom location
+  // Handle mode switching
   useEffect(() => {
-    if (!mapRef.current) return
+    const map = mapRef.current;
+    if (!map) return;
 
     if (isCustomLocation) {
-      // Hide heatmap and markers
-      if (heatmapLayerRef.current) {
-        mapRef.current.removeLayer(heatmapLayerRef.current)
-      }
-      if (markersLayerRef.current) {
-        mapRef.current.removeLayer(markersLayerRef.current)
-      }
+      if (heatmapLayerRef.current) map.removeLayer(heatmapLayerRef.current);
+      if (markersLayerRef.current) map.removeLayer(markersLayerRef.current);
     } else {
-      // Show heatmap and markers
-      if (heatmapLayerRef.current) {
-        mapRef.current.addLayer(heatmapLayerRef.current)
-      }
-      if (markersLayerRef.current) {
-        mapRef.current.addLayer(markersLayerRef.current)
-      }
-      // Remove custom location marker
+      if (heatmapLayerRef.current) map.addLayer(heatmapLayerRef.current);
+      if (markersLayerRef.current) map.addLayer(markersLayerRef.current);
       if (markerRef.current) {
-        mapRef.current.removeLayer(markerRef.current)
-        markerRef.current = null
+        map.removeLayer(markerRef.current);
+        markerRef.current = null;
       }
     }
-  }, [isCustomLocation])
-
-  if (isLoading) {
-    return (
-      <div className="w-full h-[80vh] flex items-center justify-center bg-muted rounded-lg">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    )
-  }
+  }, [isCustomLocation]);
 
   return (
     <div className="relative w-full h-[80vh]">
+      {isLoading && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-muted/50 rounded-lg">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      )}
       <div 
         ref={containerRef} 
         className="absolute inset-0 z-0 rounded-lg"
@@ -216,5 +201,5 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
         </button>
       </div>
     </div>
-  )
+  );
 } 
