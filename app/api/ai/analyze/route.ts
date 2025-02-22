@@ -6,6 +6,9 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
+export const maxDuration = 60; // 60 seconds max for hobby plan
+export const dynamic = 'force-dynamic';
+
 function calculateProximityScore(location: { lat: number; lng: number }, fossilData: any[]) {
   const MAX_DISTANCE = 500 // km
   let totalScore = 0
@@ -27,7 +30,7 @@ function calculateProximityScore(location: { lat: number; lng: number }, fossilD
   })
 
   return {
-    score: nearbyFossils ? (totalScore / nearbyFossils) * 10 : 0,
+    score: Math.min(10, nearbyFossils ? (totalScore / nearbyFossils) * 10 : 0),
     nearbyFossils
   }
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import * as React from "react"
 import { MapView } from "@/components/map-view"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2 } from "lucide-react"
@@ -12,8 +12,8 @@ interface AnalysisResult {
 }
 
 export default function AnalysisPage() {
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<AnalysisResult | null>(null)
+  const [loading, setLoading] = React.useState(false)
+  const [result, setResult] = React.useState<AnalysisResult | null>(null)
 
   const handleLocationSelect = async (location: { lat: number; lng: number }) => {
     setLoading(true)
@@ -29,12 +29,12 @@ export default function AnalysisPage() {
         }),
       })
       
-      const data = await response.json()
-      if (response.ok) {
-        setResult(data)
-      } else {
-        throw new Error(data.error || 'Analysis failed')
+      if (!response.ok) {
+        throw new Error('Analysis failed')
       }
+
+      const data = await response.json()
+      setResult(data)
     } catch (error) {
       console.error('Analysis failed:', error)
     } finally {
