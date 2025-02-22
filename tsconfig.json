@@ -20,8 +20,7 @@
     ],
     "paths": {
       "@/*": ["./*"]
-    },
-    "types": ["react", "react-dom"]
+    }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "types/global.d.ts"],
   "exclude": ["node_modules"]

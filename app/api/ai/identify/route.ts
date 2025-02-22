@@ -7,8 +7,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-// Set max duration to 60 seconds (Vercel hobby plan limit)
-export const maxDuration = 60;
+export const maxDuration = 300; // Set max duration to 5 minutes
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
@@ -22,7 +21,6 @@ export async function POST(req: Request) {
 
   try {
     const formData = await req.formData();
-<<<<<<< HEAD
     const imageFile = formData.get('image') as File;
 
     if (!imageFile) {
@@ -46,18 +44,11 @@ export async function POST(req: Request) {
 
     console.log('Sending request to OpenAI Vision API...');
 
-=======
-    const description = formData.get('description') as string;
-    const image = formData.get('image') as File;
-
-    // For now, we'll just analyze the description since image analysis requires additional setup
->>>>>>> parent of b4858ac (update20)
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4-vision-preview",
       messages: [
         {
           role: "system",
-<<<<<<< HEAD
           content: "You are an expert paleontologist with extensive knowledge of fossil identification and classification."
         },
         {
@@ -120,20 +111,5 @@ Please provide your analysis in a clear, structured format that both professiona
       },
       { status: 500 }
     );
-=======
-          content: "You are an expert paleontologist specializing in fossil identification and valuation. Provide detailed analysis and estimated market value ranges."
-        },
-        {
-          role: "user",
-          content: `Analyze this fossil description: ${description}`
-        }
-      ],
-    });
-
-    return NextResponse.json({ analysis: response.choices[0].message.content });
-  } catch (error) {
-    console.error('Fossil identification error:', error);
-    return NextResponse.json({ error: 'Identification failed' }, { status: 500 });
->>>>>>> parent of b4858ac (update20)
   }
 } 

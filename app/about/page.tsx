@@ -1,3 +1,6 @@
+import type { NextPage } from 'next'
+import React from 'react'
+
 export default function AboutPage() {
   return (
     <div className="container mx-auto py-8">
