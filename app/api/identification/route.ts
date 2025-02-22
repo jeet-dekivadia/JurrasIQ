@@ -13,13 +13,23 @@ export async function POST(req: Request) {
         { status: 400 }
       )
     }
+
+    if (!imageUrl.startsWith('data:image/')) {
+      return NextResponse.json(
+        { error: 'Invalid image format' },
+        { status: 400 }
+      )
+    }
     
     const predictions = await identificationService.identify(imageUrl)
     return NextResponse.json({ predictions })
   } catch (error) {
     console.error('Identification failed:', error)
     return NextResponse.json(
-      { error: 'Failed to identify fossil' },
+      { 
+        error: 'Failed to identify fossil',
+        details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+      },
       { status: 500 }
     )
   }

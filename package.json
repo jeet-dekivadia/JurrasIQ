@@ -3,9 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "convert-model": "ts-node scripts/convert-model.ts",
+    "postinstall": "npm run convert-model"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -73,7 +76,8 @@
     "sharp": "^0.33.0",
     "typescript": "^5.0.0",
     "@types/next": "^9.0.0",
-    "@tensorflow/tfjs": "^4.17.0"
+    "@tensorflow/tfjs": "^4.17.0",
+    "@tensorflow/tfjs-converter": "^4.17.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
