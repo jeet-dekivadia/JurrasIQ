@@ -25,12 +25,6 @@ export function CTASection() {
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
             Join the future of paleontology with JurrasIQ's AI-powered platform
           </p>
-          <Button
-            size="lg"
-            className="bg-amber-500 text-white hover:bg-amber-600 shadow-[0_0_15px_rgba(245,158,11,0.5)]"
-          >
-            Get Started Today
-          </Button>
         </motion.div>
       </div>
 
