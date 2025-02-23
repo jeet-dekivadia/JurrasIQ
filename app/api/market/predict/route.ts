@@ -3,31 +3,37 @@ import { readFile } from 'fs/promises'
 import { parse } from 'csv-parse/sync'
 import { join } from 'path'
 import { MarketPredictor } from '@/lib/market-predictor'
-import type { ParseResult } from 'csv-parse'
 
 let predictor: MarketPredictor | null = null
 
 async function initializePredictor() {
   if (predictor) return predictor
 
-  const filePath = join(process.cwd(), 'Dinosaur_Fossil_Transactions.csv')
-  const fileContent = await readFile(filePath, 'utf-8')
-  const records = parse(fileContent, {
-    columns: true,
-    skip_empty_lines: true
-  }) as ParseResult<Record<string, string>>
+  try {
+    const filePath = join(process.cwd(), 'Dinosaur_Fossil_Transactions.csv')
+    const fileContent = await readFile(filePath, 'utf-8')
 
-  predictor = new MarketPredictor(records)
-  return predictor
+    const records: Record<string, string>[] = parse(fileContent, {
+      columns: true,
+      skip_empty_lines: true
+    })
+
+    predictor = new MarketPredictor(records)
+    return predictor
+  } catch (error) {
+    console.error('Error initializing predictor:', error)
+    throw new Error('Failed to load fossil transaction data.')
+  }
 }
 
 export async function POST(req: Request) {
   try {
-    const { fossilFamily, bodyPart } = await req.json()
+    const json = await req.json()
+    const { fossilFamily, bodyPart } = json
 
     if (!fossilFamily || !bodyPart) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required fields: fossilFamily and bodyPart are required.' },
         { status: 400 }
       )
     }
@@ -37,7 +43,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ...prediction,
-      ...predictor.getAvailableOptions()
+      availableOptions: predictor.getAvailableOptions()
     })
   } catch (error) {
     console.error('Market prediction failed:', error)
@@ -46,4 +52,4 @@ export async function POST(req: Request) {
       { status: 500 }
     )
   }
-} 
+}
