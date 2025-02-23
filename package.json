@@ -81,7 +81,9 @@
     "@tensorflow/tfjs-backend-cpu": "^4.17.0",
     "pdf-lib": "^1.17.1",
     "jspdf": "^2.5.1",
-    "jspdf-autotable": "^3.8.1"
+    "jspdf-autotable": "^3.8.1",
+    "react-markdown": "^9.0.1",
+    "remark-gfm": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
