@@ -151,7 +151,7 @@ This should be a complete, professional planning document that would be acceptab
 
     // Call the OpenAI Chat Completion API with the expanded prompt.
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
