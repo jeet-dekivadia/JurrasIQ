@@ -5,8 +5,9 @@ import { useEffect, useState, Suspense } from 'react'
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, Clock, FileText, Users, Wrench } from "lucide-react"
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 function PlanContent() {
   const searchParams = useSearchParams()
@@ -54,32 +55,87 @@ function PlanContent() {
     )
   }
 
+  const site = searchParams.get('site') ? JSON.parse(decodeURIComponent(searchParams.get('site')!)) : null
+
   return (
-    <div className="container mx-auto py-8 space-y-8">
-      <div className="text-center">
+    <div className="container mx-auto py-8 space-y-8 px-4">
+      {/* Header Section */}
+      <div className="text-center max-w-3xl mx-auto">
         <h1 className="text-4xl font-bold mb-4">Excavation Plan</h1>
-        <p className="text-muted-foreground max-w-2xl mx-auto">
-          A comprehensive analysis and operational plan for the excavation site
+        <p className="text-muted-foreground text-lg">
+          Comprehensive Analysis & Operational Strategy
         </p>
+        {site && (
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="bg-primary/5">
+              <CardContent className="p-4 flex items-center gap-3">
+                <FileText className="h-5 w-5 text-primary" />
+                <div className="text-left">
+                  <p className="text-sm font-medium">Fossil Type</p>
+                  <p className="text-sm text-muted-foreground">{site.fossilType}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-primary/5">
+              <CardContent className="p-4 flex items-center gap-3">
+                <Clock className="h-5 w-5 text-primary" />
+                <div className="text-left">
+                  <p className="text-sm font-medium">Age Range</p>
+                  <p className="text-sm text-muted-foreground">
+                    {site.age_start} - {site.age_end} Mya
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-primary/5">
+              <CardContent className="p-4 flex items-center gap-3">
+                <Wrench className="h-5 w-5 text-primary" />
+                <div className="text-left">
+                  <p className="text-sm font-medium">Environment</p>
+                  <p className="text-sm text-muted-foreground">{site.environment}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
 
-      <Card className="overflow-hidden">
-        <CardContent className="p-6">
+      {/* Main Content */}
+      <Card className="overflow-hidden max-w-5xl mx-auto">
+        <CardContent className="p-8">
           {loading ? (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {[...Array(8)].map((_, i) => (
-                <div key={i} className="space-y-2">
-                  <Skeleton className="h-6 w-[60%]" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-[90%]" />
-                  <Skeleton className="h-4 w-[95%]" />
+                <div key={i} className="space-y-3">
+                  <Skeleton className="h-8 w-[40%]" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-[95%]" />
+                    <Skeleton className="h-4 w-[90%]" />
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="prose dark:prose-invert max-w-none">
-              <ReactMarkdown>{plan}</ReactMarkdown>
-            </div>
+            <article className="prose prose-slate dark:prose-invert max-w-none">
+              <ReactMarkdown 
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  h1: ({node, ...props}) => <h1 className="text-3xl font-bold border-b pb-2 mb-6" {...props} />,
+                  h2: ({node, ...props}) => <h2 className="text-2xl font-semibold mt-8 mb-4" {...props} />,
+                  h3: ({node, ...props}) => <h3 className="text-xl font-medium mt-6 mb-3" {...props} />,
+                  ul: ({node, ...props}) => <ul className="my-4 list-disc pl-6" {...props} />,
+                  ol: ({node, ...props}) => <ol className="my-4 list-decimal pl-6" {...props} />,
+                  li: ({node, ...props}) => <li className="mt-2" {...props} />,
+                  p: ({node, ...props}) => <p className="my-4 leading-relaxed" {...props} />,
+                  blockquote: ({node, ...props}) => (
+                    <blockquote className="border-l-4 border-primary/20 pl-4 italic my-6" {...props} />
+                  ),
+                }}
+              >
+                {plan}
+              </ReactMarkdown>
+            </article>
           )}
         </CardContent>
       </Card>
@@ -87,30 +143,38 @@ function PlanContent() {
   )
 }
 
-// Loading fallback component
 function PlanLoading() {
   return (
-    <div className="container mx-auto py-8 space-y-8">
-      <div className="text-center">
-        <Skeleton className="h-10 w-64 mx-auto" />
+    <div className="container mx-auto py-8 space-y-8 px-4">
+      <div className="text-center max-w-3xl mx-auto">
+        <Skeleton className="h-12 w-64 mx-auto" />
         <Skeleton className="h-6 w-96 mx-auto mt-4" />
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i} className="bg-muted/5">
+              <CardContent className="p-4">
+                <Skeleton className="h-12 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
-      <div className="grid gap-6">
-        {[...Array(7)].map((_, i) => (
-          <Card key={i} className="overflow-hidden">
-            <CardHeader className="bg-muted">
-              <Skeleton className="h-6 w-48" />
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-[90%]" />
-                <Skeleton className="h-4 w-[80%]" />
+      <Card className="overflow-hidden max-w-5xl mx-auto">
+        <CardContent className="p-8">
+          <div className="space-y-6">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="space-y-3">
+                <Skeleton className="h-8 w-[40%]" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-[95%]" />
+                  <Skeleton className="h-4 w-[90%]" />
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
