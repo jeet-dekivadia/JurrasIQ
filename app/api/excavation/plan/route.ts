@@ -16,9 +16,16 @@ export async function POST(req: Request) {
     }
 
     const prompt = `
-    Generate a concise but detailed excavation plan as a JSON object with these keys:
-    project_overview, financial_breakdown, organizational_structure, equipment_logistics, 
-    excavation_timeline, risk_assessment, long_term_impact.
+    Create a detailed excavation plan for the following site. Format your response as a JSON object with these exact keys:
+    {
+      "project_overview": "Overview text here...",
+      "financial_breakdown": "Financial details here...",
+      "organizational_structure": "Team structure here...",
+      "equipment_logistics": "Equipment details here...",
+      "excavation_timeline": "Timeline here...",
+      "risk_assessment": "Risks here...",
+      "long_term_impact": "Impact details here..."
+    }
 
     Site Details:
     - Fossil Type: ${site.fossilType || 'Unknown'}
@@ -26,8 +33,8 @@ export async function POST(req: Request) {
     - Age: ${site.age_start || 0} - ${site.age_end || 0} Mya
     - Location: ${site.locationName || 'Unknown Location'}
 
-    Keep each section focused and precise. Include key details about budget, 
-    team structure, equipment needs, timeline, and risks.
+    Make sure each section is detailed but concise. Include practical information about budget, 
+    team structure, equipment needs, timeline, and risks. Format strictly as JSON.
     `
 
     const completion = await openai.chat.completions.create({
@@ -35,21 +42,26 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "system",
-          content: "You are an expert in excavation planning. Generate concise, practical plans in JSON format."
+          content: "You are an expert in excavation planning. Generate detailed plans in valid JSON format with predefined keys."
         },
         {
           role: "user",
           content: prompt
         }
       ],
-      response_format: { type: "json_object" },
       temperature: 0.7,
-      max_tokens: 1500 // Reduced to get faster responses
+      max_tokens: 1500,
+      response_format: { type: "json_object" }
     })
 
-    const report = JSON.parse(completion.choices[0].message.content)
-    
-    // Validate report structure
+    let report: any
+    try {
+      report = JSON.parse(completion.choices[0].message.content)
+    } catch (e) {
+      throw new Error('Failed to parse AI response as JSON')
+    }
+
+    // Validate report structure and provide defaults
     const requiredFields = [
       'project_overview',
       'financial_breakdown',
@@ -60,11 +72,12 @@ export async function POST(req: Request) {
       'long_term_impact'
     ]
 
-    if (!requiredFields.every(field => typeof report[field] === 'string')) {
-      throw new Error('Invalid report format received from AI')
-    }
+    const validatedReport = requiredFields.reduce((acc, field) => ({
+      ...acc,
+      [field]: typeof report[field] === 'string' ? report[field] : 'Information not available'
+    }), {})
 
-    return NextResponse.json({ report })
+    return NextResponse.json({ report: validatedReport })
   } catch (error) {
     console.error('Failed to generate plan:', error)
     return NextResponse.json(
