@@ -6,7 +6,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
-export const maxDuration = 300 // Increase timeout to 5 minutes
+export const maxDuration = 60 // Set to maximum allowed for hobby plan
 export const dynamic = 'force-dynamic';
 
 function calculateProximityScore(location: { lat: number; lng: number }, fossilData: any[]) {

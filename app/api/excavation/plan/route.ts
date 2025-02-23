@@ -5,7 +5,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
-export const maxDuration = 300 // Increase timeout
+export const maxDuration = 60 // Set to maximum allowed for hobby plan
 
 export async function POST(req: Request) {
   try {
@@ -16,21 +16,18 @@ export async function POST(req: Request) {
     }
 
     const prompt = `
-    Generate a detailed financial and organizational overview for an archaeological excavation project.
-    Format the response as a JSON object with the following keys:
-    - project_overview
-    - financial_breakdown
-    - organizational_structure
-    - equipment_logistics
-    - excavation_timeline
-    - risk_assessment
-    - long_term_impact
+    Generate a concise but detailed excavation plan as a JSON object with these keys:
+    project_overview, financial_breakdown, organizational_structure, equipment_logistics, 
+    excavation_timeline, risk_assessment, long_term_impact.
 
     Site Details:
     - Fossil Type: ${site.fossilType || 'Unknown'}
     - Environment: ${site.environment || 'Unknown'}
-    - Estimated Age: ${site.age_start || 0} - ${site.age_end || 0} million years ago
+    - Age: ${site.age_start || 0} - ${site.age_end || 0} Mya
     - Location: ${site.locationName || 'Unknown Location'}
+
+    Keep each section focused and precise. Include key details about budget, 
+    team structure, equipment needs, timeline, and risks.
     `
 
     const completion = await openai.chat.completions.create({
@@ -38,7 +35,7 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "system",
-          content: "You are an expert in excavation planning and cost analysis. Generate detailed, realistic plans in JSON format."
+          content: "You are an expert in excavation planning. Generate concise, practical plans in JSON format."
         },
         {
           role: "user",
@@ -47,7 +44,7 @@ export async function POST(req: Request) {
       ],
       response_format: { type: "json_object" },
       temperature: 0.7,
-      max_tokens: 2000
+      max_tokens: 1500 // Reduced to get faster responses
     })
 
     const report = JSON.parse(completion.choices[0].message.content)
