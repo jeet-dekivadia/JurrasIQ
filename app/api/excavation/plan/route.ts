@@ -15,201 +15,107 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid site data' }, { status: 400 })
     }
 
-    const systemPrompt = `You are a world-class expert consortium combining expertise in paleontology, project management, financial planning, and operations management. Your task is to generate an exhaustive, corporate-grade excavation plan in JSON format.
+    const prompt = `Generate a comprehensive excavation and financial planning document for this paleontological site:
 
-    Your response must be a meticulously detailed JSON object containing these key sections, each requiring extensive detail:
+SITE DETAILS:
+- Fossil Type: ${site.fossilType || 'Unknown'}
+- Geological Environment: ${site.environment || 'Unknown'}
+- Age Range: ${site.age_start || 0} - ${site.age_end || 0} Million Years Ago
+- Location: ${site.locationName || 'Unknown Location'}
 
-    1. project_overview:
-    - Executive Summary
-    - Site Significance & Scientific Value
-    - Project Goals & Objectives
-    - Key Stakeholders
-    - Success Metrics & KPIs
-    - Regulatory Compliance Requirements
-    - Environmental Impact Considerations
-    - Local Community Relations Strategy
+Please provide an extremely detailed plan (minimum 5000 words) with the following sections:
 
-    2. financial_breakdown:
-    - Total Project Cost Estimation
-    - Detailed Budget Allocation
-    - Capital Expenditure (CAPEX)
-      * Equipment Purchase/Rental
-      * Site Infrastructure
-      * Technology & Tools
-      * Transportation
-    - Operational Expenditure (OPEX)
-      * Staff Salaries & Benefits
-      * Daily Operations
-      * Consumables & Supplies
-      * Site Maintenance
-    - Insurance & Risk Management Costs
-    - Contingency Fund (15-20% of total budget)
-    - Funding Sources & Financial Partners
-    - ROI Analysis for Commercial Aspects
-    - Cash Flow Projections
-    - Tax Considerations & Benefits
-    - Grant Opportunities
-    - Financial Risk Mitigation Strategies
+1. EXECUTIVE SUMMARY
+- Project overview
+- Key objectives
+- Expected outcomes
+- Critical success factors
 
-    3. organizational_structure:
-    - Leadership Team Composition
-    - Department Breakdown
-      * Field Operations
-      * Research & Analysis
-      * Conservation
-      * Security
-      * Logistics
-      * Administration
-    - Roles & Responsibilities Matrix
-    - Reporting Hierarchies
-    - Communication Protocols
-    - Decision-Making Framework
-    - Required Qualifications & Experience
-    - Training Requirements
-    - Health & Safety Protocols
-    - Performance Evaluation Criteria
-    - Staff Accommodation & Facilities
-    - Local Workforce Integration Plan
+2. SITE ANALYSIS & SCIENTIFIC SIGNIFICANCE
+- Geological context
+- Historical significance
+- Research potential
+- Expected discoveries
+- Scientific value proposition
 
-    4. equipment_logistics:
-    - Comprehensive Equipment List
-      * Excavation Tools
-      * Scientific Instruments
-      * Safety Equipment
-      * Documentation Tools
-      * Conservation Materials
-    - Transportation Fleet Details
-    - Supply Chain Management
-    - Equipment Maintenance Schedules
-    - Storage Facilities & Security
-    - Climate Control Requirements
-    - Backup Systems & Redundancies
-    - Technology Infrastructure
-    - Communication Systems
-    - Power Generation & Distribution
-    - Water Management Systems
-    - Waste Management Protocols
+3. FINANCIAL PLANNING
+- Total budget estimation
+- Cost breakdown
+  * Equipment and machinery
+  * Personnel and labor
+  * Site infrastructure
+  * Transportation and logistics
+  * Conservation supplies
+  * Documentation technology
+  * Insurance and permits
+- Funding sources and strategies
+- ROI analysis
+- Grant opportunities
+- Financial risk management
 
-    5. excavation_timeline:
-    - Detailed Phase Breakdown
-      * Pre-excavation Planning
-      * Site Preparation
-      * Initial Survey & Documentation
-      * Main Excavation Phases
-      * Conservation & Documentation
-      * Site Restoration
-    - Critical Path Analysis
-    - Milestone Definitions
-    - Dependencies & Prerequisites
-    - Resource Allocation Timeline
-    - Weather Considerations
-    - Seasonal Adjustments
-    - Progress Monitoring Methods
-    - Quality Control Checkpoints
-    - Documentation Requirements
-    - Stakeholder Review Points
+4. OPERATIONAL STRATEGY
+- Team structure and roles
+- Equipment requirements
+- Site infrastructure
+- Safety protocols
+- Conservation methods
+- Documentation procedures
+- Quality control measures
 
-    6. risk_assessment:
-    - Comprehensive Risk Matrix
-    - Safety & Health Risks
-      * Physical Hazards
-      * Environmental Risks
-      * Biological Hazards
-    - Operational Risks
-      * Equipment Failure
-      * Weather Disruptions
-      * Resource Shortages
-    - Financial Risks
-      * Budget Overruns
-      * Funding Delays
-      * Currency Fluctuations
-    - Scientific Risks
-      * Specimen Damage
-      * Preservation Challenges
-      * Documentation Loss
-    - Mitigation Strategies
-    - Emergency Response Plans
-    - Insurance Coverage Details
-    - Contingency Plans
-    - Crisis Communication Protocol
+5. PROJECT TIMELINE
+- Pre-excavation phase
+- Site preparation
+- Main excavation phases
+- Conservation work
+- Post-excavation activities
+- Key milestones and deadlines
 
-    7. long_term_impact:
-    - Scientific Contributions
-    - Research Publications Plan
-    - Museum Exhibition Strategy
-    - Educational Program Development
-    - Community Benefits
-    - Economic Impact Analysis
-    - Environmental Conservation
-    - Heritage Preservation
-    - Knowledge Transfer
-    - Future Research Opportunities
-    - Digital Archive Creation
-    - Public Engagement Strategy
-    - Legacy Planning
-    - Sustainable Development Goals
-    - Long-term Site Management`
+6. RISK ASSESSMENT & MITIGATION
+- Safety risks
+- Financial risks
+- Technical challenges
+- Environmental concerns
+- Mitigation strategies
+- Emergency procedures
+- Insurance coverage
 
-    const userPrompt = `Generate an ultra-detailed, corporate-grade excavation plan for this significant paleontological site:
+7. STAKEHOLDER MANAGEMENT
+- Academic partnerships
+- Local community engagement
+- Government relations
+- Media communication
+- Public outreach
 
-    Site Specifications:
-    - Fossil Type: ${site.fossilType || 'Unknown'}
-    - Geological Environment: ${site.environment || 'Unknown'}
-    - Age Range: ${site.age_start || 0} - ${site.age_end || 0} Million Years Ago
-    - Location: ${site.locationName || 'Unknown Location'}
+8. LONG-TERM IMPACT & SUSTAINABILITY
+- Scientific contributions
+- Educational opportunities
+- Community benefits
+- Environmental protection
+- Cultural heritage preservation
 
-    Requirements:
-    1. Treat this as a major corporate project requiring highest professional standards
-    2. Include specific numerical data (costs, timelines, team sizes, etc.)
-    3. Consider all stakeholders (academic, commercial, local community)
-    4. Incorporate latest industry best practices and technologies
-    5. Address sustainability and environmental responsibility
-    6. Include specific risk mitigation strategies
-    7. Provide detailed financial projections and budgeting
-    8. Consider local regulations and international standards
-    9. Include comprehensive safety and security protocols
-    10. Detail preservation and documentation methodologies
-
-    Format your response as a structured JSON object following the system-defined sections.
-    Each section should be exhaustively detailed, suitable for a 20+ page professional document.
-    Use markdown formatting within strings for better readability.
-    Include specific numbers, percentages, and timeframes where applicable.`
+Format the response using markdown headings (# for main sections, ## for subsections) and bullet points where appropriate.
+Include specific numbers, timelines, and cost estimates.
+Make the plan extremely detailed and professional, suitable for corporate and academic stakeholders.`
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
+        {
+          role: "system",
+          content: "You are a world-class expert consortium combining expertise in paleontology, project management, financial planning, and operations management. Generate an exhaustive, corporate-grade excavation plan with extreme attention to detail."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
       ],
       temperature: 0.7,
-      max_tokens: 1500,
-      response_format: { type: "json_object" }
+      max_tokens: 4000
     })
 
-    let report: any
-    try {
-      report = JSON.parse(completion.choices[0].message.content)
-    } catch (e) {
-      throw new Error('Failed to parse AI response as JSON')
-    }
-
-    // Validate and provide defaults
-    const requiredFields = [
-      'project_overview',
-      'financial_breakdown',
-      'organizational_structure',
-      'equipment_logistics',
-      'excavation_timeline',
-      'risk_assessment',
-      'long_term_impact'
-    ] as const
-
-    const validatedReport = requiredFields.reduce((acc, field) => ({
-      ...acc,
-      [field]: typeof report[field] === 'string' ? report[field] : 'Information not available'
-    }), {} as Record<typeof requiredFields[number], string>)
-
-    return NextResponse.json({ report: validatedReport })
+    return NextResponse.json({ 
+      plan: completion.choices[0].message.content || 'Failed to generate plan'
+    })
   } catch (error) {
     console.error('Failed to generate plan:', error)
     return NextResponse.json(
