@@ -12,7 +12,6 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata = {
   title: "JurrasIQ - AI-Powered Fossil Discovery Platform",
   description: "Excavate Smarter. Discover More. Maximize Fossil Value with AI.",
-    generator: 'v0.dev'
 }
 
 export default function RootLayout({
