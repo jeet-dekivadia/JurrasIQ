@@ -1,114 +1,92 @@
 "use client"
 
-import { useState } from 'react'
-import { ExcavationSiteCard } from '@/components/excavation-site-card'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Search, Loader2 } from 'lucide-react'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { AlertCircle } from 'lucide-react'
+import * as React from "react"
+import { MapView } from "@/components/map-view"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Loader2 } from "lucide-react"
+
+interface AnalysisResult {
+  analysis: string;
+  score: number;
+  nearbyFossils: number;
+}
 
 export default function AnalysisPage() {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [sites, setSites] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [loading, setLoading] = React.useState(false)
+  const [result, setResult] = React.useState<AnalysisResult | null>(null)
 
-  const searchSites = async (query: string) => {
-    if (!query.trim()) return
-    
+  const handleLocationSelect = async (location: { lat: number; lng: number }) => {
     setLoading(true)
-    setError('')
     try {
-      const response = await fetch('/api/excavation/search', {
+      const response = await fetch('/api/ai/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'analyze_location',
+          data: location
+        }),
       })
-
+      
       if (!response.ok) {
-        throw new Error('Failed to search sites')
+        throw new Error('Analysis failed')
       }
 
       const data = await response.json()
-      
-      // Get detailed information for each site
-      const sitesWithDetails = await Promise.all(
-        data.sites.map(async (site: any) => {
-          const detailsResponse = await fetch('/api/excavation/details', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              latitude: site.location.coordinates[0],
-              longitude: site.location.coordinates[1],
-              fossilType: site.fossilType,
-              age: site.age.start
-            })
-          })
-          if (!detailsResponse.ok) {
-            throw new Error('Failed to get site details')
-          }
-          const { details } = await detailsResponse.json()
-          return { ...site, details }
-        })
-      )
-      
-      setSites(sitesWithDetails)
+      setResult(data)
     } catch (error) {
-      console.error('Failed to search sites:', error)
-      setError('Failed to search excavation sites')
+      console.error('Analysis failed:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    searchSites(searchQuery)
-  }
-
   return (
-    <div className="container py-8">
-      <h1 className="text-3xl font-bold mb-8">Site Analysis</h1>
+    <div className="container mx-auto py-4 space-y-6">
+      <h1 className="text-4xl font-bold">Site Analysis</h1>
       
-      <form onSubmit={handleSearch} className="flex gap-2 mb-8">
-        <Input
-          placeholder="Search location..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-sm"
-        />
-        <Button 
-          type="submit"
-          disabled={loading || !searchQuery.trim()}
-        >
-          {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          ) : (
-            <Search className="h-4 w-4 mr-2" />
-          )}
-          {loading ? 'Searching...' : 'Search'}
-        </Button>
-      </form>
+      <div className="grid grid-cols-1 gap-6">
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Interactive Fossil Map</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0 min-h-[80vh]">
+            <MapView onLocationSelect={handleLocationSelect} />
+          </CardContent>
+        </Card>
 
-      {error && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {sites.map((site) => (
-          <ExcavationSiteCard key={site.id} site={site} />
-        ))}
+        {(loading || result) && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Analysis Results</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex items-center justify-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : result && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-muted rounded-lg">
+                      <div className="text-sm text-muted-foreground">Potential Score</div>
+                      <div className="text-2xl font-bold">{result.score.toFixed(1)}/10</div>
+                    </div>
+                    <div className="p-4 bg-muted rounded-lg">
+                      <div className="text-sm text-muted-foreground">Nearby Sites</div>
+                      <div className="text-2xl font-bold">{result.nearbyFossils}</div>
+                    </div>
+                  </div>
+                  <div className="prose dark:prose-invert">
+                    <p>{result.analysis}</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
-
-      {!loading && sites.length === 0 && searchQuery && (
-        <p className="text-center text-muted-foreground">
-          No excavation sites found for "{searchQuery}"
-        </p>
-      )}
     </div>
   )
 } 
