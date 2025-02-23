@@ -7,6 +7,7 @@ import { SearchLocation } from "@/components/search-location"
 import type { FossilLocation } from '@/lib/load-fossil-data'
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { PdfGenerator } from "@/components/pdf-generator"
 
 interface DynamicMapProps {
   onLocationSelect?: (location: { lat: number; lng: number }) => void;
@@ -334,11 +335,12 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
             {nearbyLocations.map((site, index) => (
               <Card
                 key={index}
-                className={`p-4 transition-colors cursor-pointer hover:bg-accent ${
+                className={`p-4 transition-colors cursor-pointer hover:bg-accent relative ${
                   selectedSite === site ? 'border-primary' : ''
                 }`}
                 onClick={() => handleSiteSelect(site)}
               >
+                <PdfGenerator site={site} />
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                     <MapPin className="h-4 w-4 text-primary" />
