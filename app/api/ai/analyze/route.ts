@@ -69,18 +69,27 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "system",
-          content: "You are a paleontology expert AI. Analyze the given location data and provide insights about potential fossil deposits. Be specific and concise."
+          content: "You are a paleontology expert AI. Provide detailed analysis about fossil sites including geological context, excavation potential, and historical significance. Be specific and informative while remaining concise."
         },
         {
           role: "user",
           content: `Analyze this location for fossil potential:
-            Location: ${JSON.stringify(data)}
-            Proximity Score: ${score.toFixed(2)}/10
-            Nearby Fossil Sites: ${nearbyFossils}
+            Location: ${data.locationName}
+            Coordinates: ${data.lat}, ${data.lng}
+            Fossil Types: ${data.fossilType}
+            Environment: ${data.environment}
+            Age Range: ${data.age_start} - ${data.age_end} million years ago
             
-            Provide a brief analysis of the excavation potential at this location.`
+            Provide a comprehensive analysis including:
+            1. Geological context and formation history
+            2. Expected fossil types and preservation quality
+            3. Historical significance of previous finds
+            4. Excavation challenges and recommendations
+            5. Research potential and scientific value`
         }
       ],
+      temperature: 0.7,
+      max_tokens: 500
     })
 
     return NextResponse.json({ 

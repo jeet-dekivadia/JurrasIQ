@@ -14,6 +14,7 @@ interface DynamicMapProps {
 
 interface ExtendedFossilLocation extends FossilLocation {
   distance?: number;
+  locationName?: string;
 }
 
 export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
@@ -343,15 +344,18 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
                     <MapPin className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <h4 className="font-semibold">Site #{index + 1}</h4>
+                    <h4 className="font-semibold">{site.locationName || `Site #${index + 1}`}</h4>
                     <p className="text-sm text-muted-foreground">
                       {site.distance?.toFixed(2)} km away
                     </p>
                     <p className="text-sm mt-1">
-                      <span className="font-medium">Fossils:</span> {site.fossilType.split(',')[0]}...
+                      <span className="font-medium">Fossils:</span> {site.fossilType}
                     </p>
                     <p className="text-sm">
                       <span className="font-medium">Age:</span> {site.age_start} - {site.age_end} Mya
+                    </p>
+                    <p className="text-sm">
+                      <span className="font-medium">Environment:</span> {site.environment}
                     </p>
                   </div>
                 </div>
