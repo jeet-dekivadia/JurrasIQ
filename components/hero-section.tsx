@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { useInView } from "react-intersection-observer"
 import { cn } from "@/lib/utils"
+import { useRouter } from "next/navigation"
 
 export function HeroSection() {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -12,6 +13,7 @@ export function HeroSection() {
     threshold: 0.1,
     triggerOnce: true,
   })
+  const router = useRouter()
 
   useEffect(() => {
     if (videoRef.current) {
@@ -61,8 +63,9 @@ export function HeroSection() {
                 "transition-all duration-300 hover:scale-105",
                 "shadow-[0_0_15px_rgba(245,158,11,0.5)]",
               )}
+              onClick={() => router.push("/analysis")}
             >
-              Start Exploring Fossils →
+              Go to Analysis →
             </Button>
           </motion.div>
         </div>
@@ -88,4 +91,3 @@ export function HeroSection() {
     </section>
   )
 }
-
