@@ -5,8 +5,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, Clock, FileText, MapPin, Microscope, Calendar, Download, Share2, Printer } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { AlertCircle, Clock, FileText, MapPin, Microscope, Calendar } from "lucide-react"
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -58,66 +57,18 @@ function PlanContent() {
 
   const site = searchParams.get('site') ? JSON.parse(decodeURIComponent(searchParams.get('site')!)) : null
 
-  const handlePrint = () => {
-    window.print()
-  }
-
-  const handleDownload = () => {
-    const element = document.createElement("a")
-    const file = new Blob([plan], { type: 'text/markdown' })
-    element.href = URL.createObjectURL(file)
-    element.download = "excavation-plan.md"
-    document.body.appendChild(element)
-    element.click()
-    document.body.removeChild(element)
-  }
-
-  const handleShare = async () => {
-    try {
-      await navigator.share({
-        title: 'Excavation Plan',
-        text: 'Check out this excavation plan',
-        url: window.location.href
-      })
-    } catch (error) {
-      console.log('Sharing failed', error)
-    }
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background/80">
       <div className="container mx-auto py-8 space-y-8 px-4">
         {/* Enhanced Header Section */}
         <div className="text-center max-w-4xl mx-auto">
-          <div className="flex justify-center items-center gap-2 mb-2">
-            <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
-              Excavation Plan
-            </span>
-          </div>
           <h1 className="text-5xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70">
-            Site Analysis & Strategy
+            Excavation Plan
           </h1>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            A comprehensive analysis and strategic operations document for the successful execution of the excavation project
+          <p className="text-xl text-muted-foreground mb-8">
+            Comprehensive Analysis & Strategic Operations Document
           </p>
-
-          {/* Action Buttons */}
-          <div className="flex justify-center gap-4 mb-8">
-            <Button variant="outline" size="sm" onClick={handlePrint}>
-              <Printer className="w-4 h-4 mr-2" />
-              Print
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleDownload}>
-              <Download className="w-4 h-4 mr-2" />
-              Download
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleShare}>
-              <Share2 className="w-4 h-4 mr-2" />
-              Share
-            </Button>
-          </div>
           
-          {/* Site Info Cards */}
           {site && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
               <Card className="bg-card/50 backdrop-blur-sm border-primary/10">
@@ -163,26 +114,10 @@ function PlanContent() {
               </Card>
             </div>
           )}
-
-          {/* Progress Bar */}
-          <div className="mt-12 flex items-center justify-center gap-8">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-primary"></div>
-              <span className="text-sm text-muted-foreground">Plan Generated</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-primary/50"></div>
-              <span className="text-sm text-muted-foreground">Under Review</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-primary/20"></div>
-              <span className="text-sm text-muted-foreground">Implementation</span>
-            </div>
-          </div>
         </div>
 
         {/* Main Content with Enhanced Styling */}
-        <Card className="overflow-hidden max-w-5xl mx-auto bg-card/50 backdrop-blur-sm border-primary/10 print:shadow-none">
+        <Card className="overflow-hidden max-w-5xl mx-auto bg-card/50 backdrop-blur-sm border-primary/10">
           <CardContent className="p-8">
             {loading ? (
               <div className="space-y-6">
@@ -203,10 +138,7 @@ function PlanContent() {
                   remarkPlugins={[remarkGfm]}
                   components={{
                     h1: ({node, ...props}) => (
-                      <h1 className="text-3xl font-bold border-b border-primary/20 pb-4 mb-6 flex items-center gap-3" {...props}>
-                        {props.children}
-                        <div className="flex-grow h-px bg-primary/20"></div>
-                      </h1>
+                      <h1 className="text-3xl font-bold border-b border-primary/20 pb-4 mb-6" {...props} />
                     ),
                     h2: ({node, ...props}) => (
                       <h2 className="text-2xl font-semibold mt-8 mb-4 text-primary/90" {...props} />
@@ -240,12 +172,6 @@ function PlanContent() {
                     td: ({node, ...props}) => (
                       <td className="border border-primary/20 px-4 py-2" {...props} />
                     ),
-                    code: ({node, ...props}) => (
-                      <code className="bg-primary/5 text-primary px-1.5 py-0.5 rounded" {...props} />
-                    ),
-                    pre: ({node, ...props}) => (
-                      <pre className="bg-primary/5 p-4 rounded-lg overflow-x-auto" {...props} />
-                    ),
                   }}
                 >
                   {plan}
@@ -254,12 +180,6 @@ function PlanContent() {
             )}
           </CardContent>
         </Card>
-
-        {/* Footer */}
-        <div className="text-center text-sm text-muted-foreground mt-8">
-          <p>Generated on {new Date().toLocaleDateString()}</p>
-          <p className="mt-2">This document is for planning purposes only</p>
-        </div>
       </div>
     </div>
   )
