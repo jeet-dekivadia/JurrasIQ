@@ -11,6 +11,7 @@ export interface FossilLocation {
   age_end: number
   environment: string
   country: string
+  locationName?: string
 }
 
 export function loadFossilData(): FossilLocation[] {

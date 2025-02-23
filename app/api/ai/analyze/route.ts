@@ -6,7 +6,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
-export const maxDuration = 60; // 60 seconds max for hobby plan
+export const maxDuration = 60 // Set to maximum allowed for hobby plan
 export const dynamic = 'force-dynamic';
 
 function calculateProximityScore(location: { lat: number; lng: number }, fossilData: any[]) {
@@ -57,39 +57,49 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { type, data } = body
 
-    if (type !== 'analyze_location') {
-      return NextResponse.json({ error: 'Invalid analysis type' }, { status: 400 })
+    if (!data || typeof data !== 'object') {
+      return NextResponse.json({ error: 'Invalid data format' }, { status: 400 })
     }
 
-    const fossilData = loadFossilData()
-    const { score, nearbyFossils } = calculateProximityScore(data, fossilData)
-
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: "You are a paleontology expert AI. Analyze the given location data and provide insights about potential fossil deposits. Be specific and concise."
+          content: "You are a paleontology expert AI. Provide detailed analysis about fossil sites including geological context, excavation potential, and historical significance. Be specific and informative while remaining concise."
         },
         {
           role: "user",
           content: `Analyze this location for fossil potential:
-            Location: ${JSON.stringify(data)}
-            Proximity Score: ${score.toFixed(2)}/10
-            Nearby Fossil Sites: ${nearbyFossils}
+            Location: ${data.locationName || 'Unknown Location'}
+            Coordinates: ${data.lat}, ${data.lng}
+            Fossil Types: ${data.fossilType || 'Unknown'}
+            Environment: ${data.environment || 'Unknown'}
+            Age Range: ${data.age_start || 0} - ${data.age_end || 0} million years ago
             
-            Provide a brief analysis of the excavation potential at this location.`
+            Provide a comprehensive analysis including:
+            1. Geological context and formation history
+            2. Expected fossil types and preservation quality
+            3. Historical significance of previous finds
+            4. Excavation challenges and recommendations
+            5. Research potential and scientific value`
         }
       ],
+      temperature: 0.7,
+      max_tokens: 1000
     })
 
+    if (!response.choices[0]?.message?.content) {
+      throw new Error('No analysis received from AI')
+    }
+
     return NextResponse.json({ 
-      analysis: response.choices[0].message.content,
-      score,
-      nearbyFossils
+      analysis: response.choices[0].message.content
     })
   } catch (error) {
     console.error('AI Analysis Error:', error)
-    return NextResponse.json({ error: 'Analysis failed' }, { status: 500 })
+    return NextResponse.json({ 
+      error: error instanceof Error ? error.message : 'Analysis failed' 
+    }, { status: 500 })
   }
 } 

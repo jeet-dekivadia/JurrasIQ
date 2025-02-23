@@ -7,6 +7,7 @@ import { SearchLocation } from "@/components/search-location"
 import type { FossilLocation } from '@/lib/load-fossil-data'
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { PlanViewer } from "@/components/plan-viewer"
 
 interface DynamicMapProps {
   onLocationSelect?: (location: { lat: number; lng: number }) => void;
@@ -14,6 +15,7 @@ interface DynamicMapProps {
 
 interface ExtendedFossilLocation extends FossilLocation {
   distance?: number;
+  locationName?: string;
 }
 
 export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
@@ -333,25 +335,29 @@ export default function DynamicMap({ onLocationSelect }: DynamicMapProps) {
             {nearbyLocations.map((site, index) => (
               <Card
                 key={index}
-                className={`p-4 transition-colors cursor-pointer hover:bg-accent ${
+                className={`p-4 transition-colors cursor-pointer hover:bg-accent relative ${
                   selectedSite === site ? 'border-primary' : ''
                 }`}
                 onClick={() => handleSiteSelect(site)}
               >
+                <PlanViewer site={site} />
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                     <MapPin className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <h4 className="font-semibold">Site #{index + 1}</h4>
+                    <h4 className="font-semibold">{site.locationName || `Site #${index + 1}`}</h4>
                     <p className="text-sm text-muted-foreground">
                       {site.distance?.toFixed(2)} km away
                     </p>
                     <p className="text-sm mt-1">
-                      <span className="font-medium">Fossils:</span> {site.fossilType.split(',')[0]}...
+                      <span className="font-medium">Fossils:</span> {site.fossilType}
                     </p>
                     <p className="text-sm">
                       <span className="font-medium">Age:</span> {site.age_start} - {site.age_end} Mya
+                    </p>
+                    <p className="text-sm">
+                      <span className="font-medium">Environment:</span> {site.environment}
                     </p>
                   </div>
                 </div>
