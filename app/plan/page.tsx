@@ -1,7 +1,7 @@
 "use client"
 
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -13,7 +13,7 @@ interface PlanSection {
   icon: React.ComponentType<any>
 }
 
-export default function PlanPage() {
+function PlanContent() {
   const searchParams = useSearchParams()
   const [plan, setPlan] = useState<any>(null)
   const [error, setError] = useState<string>('')
@@ -106,5 +106,41 @@ export default function PlanPage() {
         ))}
       </div>
     </div>
+  )
+}
+
+// Loading fallback component
+function PlanLoading() {
+  return (
+    <div className="container mx-auto py-8 space-y-8">
+      <div className="text-center">
+        <Skeleton className="h-10 w-64 mx-auto" />
+        <Skeleton className="h-6 w-96 mx-auto mt-4" />
+      </div>
+      <div className="grid gap-6">
+        {[...Array(7)].map((_, i) => (
+          <Card key={i} className="overflow-hidden">
+            <CardHeader className="bg-muted">
+              <Skeleton className="h-6 w-48" />
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-[90%]" />
+                <Skeleton className="h-4 w-[80%]" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default function PlanPage() {
+  return (
+    <Suspense fallback={<PlanLoading />}>
+      <PlanContent />
+    </Suspense>
   )
 } 
