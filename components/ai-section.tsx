@@ -3,7 +3,6 @@
 import { useRef } from "react"
 import { motion, useScroll, useTransform } from "framer-motion"
 import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Brain, Database, BarChart3 } from "lucide-react"
 
 export function AISection() {
@@ -21,7 +20,7 @@ export function AISection() {
       ref={ref}
       className="relative min-h-screen w-full overflow-hidden py-24"
       style={{
-        backgroundImage: `url(https://hebbkx1anhila5yf.public.blob.vercel-storage.com/DALL%C2%B7E%202025-02-22%2003.27.41%20-%203.%20A%20prehistoric%20dinosaur%20excavation%20site%20at%20night,%20illuminated%20by%20glowing%20amber%20lights%20embedded%20in%20the%20rocks.%20Paleontologists%20are%20working%20alongside%20A-rG19xjKbL4SYUsCWgtTylEYUwlJn5u.webp)`,
+        backgroundImage: `url(https://images7.alphacoders.com/113/1130240.jpg)`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
@@ -37,7 +36,7 @@ export function AISection() {
         </div>
 
         <div className="grid gap-8 md:grid-cols-3">
-          {features.map((feature, index) => (
+          {features.map((feature) => (
             <Card
               key={feature.title}
               className="bg-black/40 border-blue-500/20 hover:border-blue-500/40 transition-colors duration-300"
@@ -47,15 +46,7 @@ export function AISection() {
                   <feature.icon className="h-12 w-12 text-blue-400" />
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2 text-center">{feature.title}</h3>
-                <p className="text-gray-300 text-center mb-4">{feature.description}</p>
-                <div className="flex justify-center">
-                  <Button
-                    variant="outline"
-                    className="border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white"
-                  >
-                    Explore Feature
-                  </Button>
-                </div>
+                <p className="text-gray-300 text-center">{feature.description}</p>
               </motion.div>
             </Card>
           ))}
@@ -85,4 +76,3 @@ const features = [
     icon: BarChart3,
   },
 ]
-

@@ -3,7 +3,6 @@
 import { useRef } from "react"
 import { motion, useScroll, useTransform } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { MapPin, Search, Layers } from "lucide-react"
 
 export function ExcavationSection() {
@@ -43,13 +42,7 @@ export function ExcavationSection() {
               <CardContent className="p-6">
                 <feature.icon className="h-12 w-12 text-amber-400 mb-4" />
                 <h3 className="text-xl font-bold text-white mb-2">{feature.title}</h3>
-                <p className="text-gray-300 mb-4">{feature.description}</p>
-                <Button
-                  variant="outline"
-                  className="border-amber-500 text-amber-400 hover:bg-amber-500 hover:text-white"
-                >
-                  Learn More
-                </Button>
+                <p className="text-gray-300">{feature.description}</p>
               </CardContent>
             </Card>
           ))}
