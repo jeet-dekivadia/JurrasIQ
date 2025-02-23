@@ -25,9 +25,25 @@ export function PdfGenerator({ site }: PdfGeneratorProps) {
       .trim()
   }
 
-  const generatePDF = async () => {
+  const createCanvas = () => {
+    const canvas = document.createElement('canvas')
+    canvas.setAttribute('willReadFrequently', 'true')
+    return canvas
+  }
+
+  const generatePDF = async (e: React.MouseEvent) => {
+    e.stopPropagation()
     setIsGenerating(true)
     try {
+      // Configure jsPDF to use our canvas
+      const canvas = createCanvas()
+      const doc = new jsPDF({
+        unit: 'mm',
+        format: 'a4',
+        putOnlyUsedFonts: true,
+        floatPrecision: 16
+      })
+
       // Get the excavation plan from the API
       const response = await fetch('/api/excavation/plan', {
         method: 'POST',
@@ -39,7 +55,6 @@ export function PdfGenerator({ site }: PdfGeneratorProps) {
       if (!data.report) throw new Error('Failed to generate report')
 
       // Create PDF
-      const doc = new jsPDF()
       doc.setFont("helvetica", "bold")
       doc.setFontSize(18)
       doc.text("Excavation Financial & Operational Plan", 10, 15)
